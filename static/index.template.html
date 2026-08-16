@@ -1,4 +1,9 @@
-<title>Moneymeter</title>
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>MoneyMeter</title>
 <style>
 @font-face{font-family:"Instrument Sans";src:url(data:font/woff2;base64,__FONT_N__) format("woff2");font-weight:400 700;font-style:normal;font-display:swap}
 @font-face{font-family:"Instrument Sans";src:url(data:font/woff2;base64,__FONT_I__) format("woff2");font-weight:400 700;font-style:italic;font-display:swap}
@@ -10,6 +15,19 @@
   --act:#007AFF; --teal:#30B0C7; --indigo:#5856D6;
   --shadow:0 1px 2px rgba(29,29,31,.04), 0 4px 16px rgba(29,29,31,.045);
   color-scheme:light;
+
+  /* Fluid type scale — every size interpolates with the viewport, so the layout
+     responds continuously instead of snapping at a handful of breakpoints. */
+  --t-hero:clamp(38px, 11vw, 58px);   /* the one number a screen is about */
+  --t-title:clamp(19px, 4.4vw, 26px); /* every page title, Home's date included */
+  --t-stat:clamp(22px, 5.6vw, 28px);  /* a book card's number, a wallet total */
+  --t-sec:17px;
+
+  /* Fluid gutters */
+  --gutter:clamp(14px, 4vw, 20px);
+  --pad-card:clamp(15px, 3.6vw, 18px);
+
+  --tap:44px; /* the smallest thing a thumb should have to hit */
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -26,21 +44,28 @@ a{color:var(--act);text-decoration:none}
 :focus-visible{outline:2px solid var(--act);outline-offset:2px;border-radius:8px}
 
 /* ---------- shell ---------- */
-.topbar{position:sticky;top:0;z-index:20;background:rgba(250,250,247,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-.topbar-in{max-width:920px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:3px;overflow-x:auto;scrollbar-width:none}
-.topbar-in::-webkit-scrollbar{display:none}
-.brand{font-weight:600;font-size:15px;letter-spacing:-.02em;margin-right:12px;flex-shrink:0}
-.navlink{white-space:nowrap;border:0;background:none;padding:6px 13px;border-radius:999px;font-size:14px;color:var(--sub);cursor:pointer;transition:background .15s,color .15s}
-.navlink:hover{background:var(--line-soft);color:var(--ink)}
-.navlink[aria-current="page"]{background:var(--ink);color:#fff}
-.navsep{width:1px;height:16px;background:var(--line);margin:0 7px;flex-shrink:0}
-.signout{margin-left:auto;flex-shrink:0;border:0;background:none;padding:6px 12px;border-radius:999px;font-size:14px;color:var(--faint);cursor:pointer}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(250,250,247,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.topbar-in{max-width:920px;margin:0 auto;padding:9px var(--gutter);display:flex;align-items:center;gap:3px}
+.brand{font-weight:600;font-size:20px;letter-spacing:-.03em;margin-right:18px;flex-shrink:0;color:var(--ink)}
+.navscroll{display:flex;align-items:center;gap:3px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.navscroll::-webkit-scrollbar{display:none}
+/* No pill, no rule. The current page is simply the heaviest word in the bar. */
+.navlink{white-space:nowrap;border:0;background:none;padding:0 11px;min-height:var(--tap);
+  font-size:14px;font-weight:400;color:var(--sub);cursor:pointer;transition:color .15s}
+.navlink:hover{color:var(--ink)}
+.navlink[aria-current="page"]{color:var(--ink);font-weight:600}
+/* Sign out is not a destination — it sits past a divider and reads quieter. */
+.signout{margin-left:auto;flex-shrink:0;border:0;background:none;padding:0 4px 0 14px;min-height:var(--tap);
+  border-left:1px solid var(--line);font-size:13px;color:var(--faint);cursor:pointer}
 .signout:hover{color:var(--ink)}
-.wrap{max-width:920px;margin:0 auto;padding:34px 20px 96px}
+.wrap{max-width:920px;margin:0 auto;
+  padding:clamp(20px,5vw,34px) var(--gutter) calc(84px + env(safe-area-inset-bottom));
+  padding-left:max(var(--gutter),env(safe-area-inset-left));padding-right:max(var(--gutter),env(safe-area-inset-right))}
 
 /* ---------- page headers ---------- */
 .phead{margin-bottom:26px}
-.phead h1{font-size:26px;font-weight:600}
+.phead h1{font-size:var(--t-title);font-weight:600}
 .phead .role{color:var(--sub);font-size:14px;margin-top:5px;max-width:60ch}
 
 /* ---------- primitives ---------- */
@@ -56,7 +81,8 @@ a{color:var(--act);text-decoration:none}
 .btn-up:hover{background:rgba(52,199,89,.2)}
 .btn-down{background:rgba(255,59,48,.1);color:var(--down)}
 .btn-down:hover{background:rgba(255,59,48,.18)}
-.linkbtn{border:0;background:none;padding:0;font-size:13px;color:var(--faint);cursor:pointer}
+/* padding, not size — the label stays small, the hit area doesn't */
+.linkbtn{border:0;background:none;padding:9px 6px;margin:-9px -6px;font-size:13px;color:var(--faint);cursor:pointer}
 .linkbtn:hover{color:var(--down)}
 .linkbtn.neutral:hover{color:var(--ink)}
 .field{width:100%;border:1px solid var(--line);background:var(--paper);border-radius:11px;padding:9px 12px;font-size:14px;font-family:inherit;color:var(--ink)}
@@ -74,14 +100,36 @@ textarea.field{resize:vertical;line-height:1.55}
 .sub{color:var(--sub)} .faint{color:var(--faint)}
 .tiny{font-size:12px} .small{font-size:13px}
 .sec{margin-top:38px}
-.sec-h{font-size:17px;font-weight:600;margin-bottom:4px}
+.sec-h{font-size:var(--t-sec);font-weight:600;margin-bottom:4px}
 .sec-r{font-size:13px;color:var(--sub);margin-bottom:14px}
 .grid{display:grid;gap:12px}
-.g3{grid-template-columns:repeat(3,1fr)}
-.g2{grid-template-columns:repeat(2,1fr)}
+/* auto-fit, so columns reflow at whatever width they stop fitting rather than
+   waiting for a breakpoint someone remembered to write */
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+
+/* ---------- stat: a label, a number, a line of context ---------- */
+.gstat{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px var(--pad-card)}
+.stat .label{margin-bottom:3px}
+.stat .n{font-size:var(--t-stat);font-weight:600;letter-spacing:-.03em;line-height:1.1}
+.stat .why{font-size:12px;color:var(--faint);margin-top:4px;line-height:1.45}
+.stat .bar{margin-top:9px}
+.stat .kv{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:2px 0}
+.stat .kv span:first-child{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Stacked, a stat is a row: the number belongs beside its label, not under it. */
+@media (max-width:439px){
+  .stat{display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:12px}
+  .stat .label{grid-column:1;margin-bottom:0}
+  .stat .n{grid-column:2;grid-row:1;text-align:right;font-size:20px}
+  .stat .why,.stat .bar,.stat .kv{grid-column:1/-1}
+  .stat .why{margin-top:2px}
+}
 .row{display:flex;align-items:center;gap:12px}
-.rowsplit{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line)}
+.rowsplit{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:12px var(--pad-card);border-top:1px solid var(--line)}
 .rowsplit:first-child{border-top:0}
+/* the text block claims a whole line before anything is allowed to sit beside it */
+.rowsplit .grow{flex:1 1 220px}
 .grow{flex:1;min-width:0}
 .trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
@@ -104,13 +152,118 @@ summary.act{color:var(--act)}
 .login form{padding:24px;margin-top:28px}
 .login .btn{width:100%;margin-top:16px}
 
-/* ---------- this week ---------- */
-.week{max-width:520px;margin:0 auto}
-.week-top{text-align:center}
+/* ---------- home: the card wall ---------- */
 .eyebrow{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)}
-.bignum{font-size:62px;font-weight:600;letter-spacing:-.045em;line-height:1.05;margin-top:14px}
+/* Home opens on the three actions — no dateline. Every card states its own
+   period, and the wall only ever reads the present one. */
+.home-top{margin:0 0 22px;display:flex;align-items:center;gap:14px 16px;flex-wrap:wrap}
+
+/* The three ways money moves. They are the app's primary actions, so they say
+   what they do — an unlabelled glyph is a quiz, not a button. */
+.acts{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.actbtn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:var(--tap);padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);
+  font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;box-shadow:var(--shadow);white-space:nowrap;
+  transition:transform .15s,background .15s,border-color .15s}
+.actbtn:hover{background:var(--paper);border-color:rgba(29,29,31,.18);transform:translateY(-1px)}
+.actbtn:active{transform:translateY(0)}
+.actbtn svg{width:17px;height:17px;flex-shrink:0;stroke-width:2.2;stroke:currentColor;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ib-move svg{color:var(--act)} .ib-out svg{color:var(--down)} .ib-in svg{color:var(--up-ink)}
+/* On a phone the row spans the width and splits evenly — three thumb targets. */
+@media (max-width:600px){
+  .acts{width:100%;gap:7px}
+  .actbtn{flex:1 1 0;min-width:0;padding:0 8px;font-size:13px;gap:5px}
+}
+
+/* ---------- action sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(29,29,31,.34);z-index:40;animation:fade .16s ease}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translate(-50%,-46%)}}
+@keyframes slide{from{transform:translateY(100%)}}
+.sheet{position:fixed;z-index:41;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(430px,calc(100vw - 32px));max-height:88vh;overflow-y:auto;
+  background:var(--card);border-radius:22px;padding:20px 22px 22px;
+  box-shadow:0 24px 64px rgba(29,29,31,.24);animation:rise .2s ease}
+.sheet-head{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.sheet-head h2{font-size:17px;font-weight:600;flex:1}
+.sheet-x{border:0;background:var(--sunk);width:30px;height:30px;border-radius:999px;font-size:17px;color:var(--sub);cursor:pointer;line-height:1}
+.sheet-x:hover{background:var(--line);color:var(--ink)}
+.sheet .role{font-size:13px;color:var(--sub)}
+.amtbig{display:flex;align-items:baseline;justify-content:center;gap:2px;padding:22px 0 24px}
+.amtbig .cur{font-size:30px;font-weight:500;color:var(--faint)}
+/* sizes to its content so the $ stays glued to the number; size="4" is the fallback */
+.amtbig input{border:0;background:none;font:inherit;font-size:46px;font-weight:600;letter-spacing:-.04em;
+  width:auto;min-width:1ch;max-width:min(230px,60vw);text-align:left;padding:0;
+  color:var(--ink);font-variant-numeric:tabular-nums;field-sizing:content}
+.amtbig input:focus{outline:none}
+.amtbig input::placeholder{color:var(--faint)}
+.sheet .fset{display:grid;gap:12px}
+.sheet .btn{width:100%;margin-top:18px;padding:12px 18px;font-size:15px}
+.wall{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(272px,1fr))}
+/* A book card doesn't meter the period, it *composes* it: one bar cut into a
+   segment per rhythm, and a legend underneath that decodes the bar. A single
+   fill would only say how much is gone — this says where it went. */
+.bcard{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+  padding:var(--pad-card);display:flex;flex-direction:column;cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s}
+.bcard:hover{transform:translateY(-2px);border-color:rgba(29,29,31,.15);box-shadow:0 2px 4px rgba(29,29,31,.05),0 10px 26px rgba(29,29,31,.08)}
+/* the name is a caption, not a headline — the number is the headline */
+.bcard h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--sub);padding-right:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcard .go{position:absolute;top:var(--pad-card);right:var(--pad-card);color:var(--faint);font-size:18px;line-height:1}
+.bcard:hover .go{color:var(--ink)}
+.bnum{font-size:var(--t-stat);font-weight:600;letter-spacing:-.035em;line-height:1;margin-top:9px}
+.bcard .said{font-size:12px;color:var(--faint);margin-top:6px}
+
+/* One continuous bar, squared off and butted together, split by hairlines the
+   colour of the card. Rounded pills per segment read as separate objects; this
+   reads as one quantity divided up, which is what it is. */
+.segbar{display:flex;height:9px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:16px}
+.segbar>i{display:block;height:100%;min-width:2px;transition:width .4s ease}
+.segbar>i+i{border-left:2px solid var(--card)}
+.segbar.over{background:rgba(255,59,48,.22)}
+
+/* the legend that decodes it — each swatch is a slice of the bar, stood upright */
+.legend{display:flex;flex-direction:column;margin-top:13px}
+.lrow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:4px 0;font-size:13px}
+.lrow .dot{width:4px;height:15px;border-radius:2px;flex-shrink:0}
+.lrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .v{color:var(--sub);white-space:nowrap}
+.lrow.is-over .v{color:var(--down);font-weight:500}
+.lrow.rest .nm,.lrow.rest .v{color:var(--faint)}
+.lrow.rest .dot{box-shadow:inset 0 0 0 1px var(--line)}
+/* the quick log sits *in* the card, sunk into it */
+.qa{display:flex;gap:6px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:6px}
+.qa input,.qa select{border:1px solid transparent;background:var(--card);border-radius:8px;font:inherit;font-size:13px;padding:6px 9px;min-width:0;color:var(--ink)}
+.qa input:focus,.qa select:focus{outline:none;border-color:rgba(29,29,31,.28)}
+.qa .amt{width:78px;flex-shrink:0}
+.qa select{flex:1;min-width:0;appearance:none}
+.qa button{flex-shrink:0;border:0;background:var(--ink);color:#fff;border-radius:8px;padding:6px 11px;font-size:13px;font-weight:500;cursor:pointer}
+.backlink{border:0;background:none;padding:0;font-size:13px;color:var(--sub);cursor:pointer;margin-bottom:16px}
+.backlink:hover{color:var(--ink)}
+/* Name and figure are the pair that matters, so they share a line at every
+   width; the bar takes the rest of the row and never floats mid-air. */
+.rhythmline{display:grid;grid-template-columns:1fr minmax(90px,auto);align-items:baseline;
+  column-gap:12px;row-gap:6px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.rhythmline:last-child{border-bottom:0}
+.rhythmline .nm{font-size:14px}
+.rhythmline .fig{text-align:right;white-space:nowrap}
+.rhythmline .bar{grid-column:1/-1;width:100%;height:5px}
+.cled{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13px}
+.cled .d{width:44px;flex-shrink:0;font-size:11px;color:var(--faint)}
+
+/* ---------- one book's week ---------- */
+.wk{max-width:540px;margin:0 auto}
+.switch{display:flex;align-items:center;gap:6px;margin-bottom:26px}
+.sw-name{flex:1;text-align:center;min-width:0}
+.sw-name b{display:block;font-size:17px;font-weight:600;letter-spacing:-.01em}
+.sw-arrow{width:var(--tap);height:var(--tap);flex-shrink:0;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--sub);font-size:17px;line-height:1;cursor:pointer}
+.sw-arrow:hover{background:var(--paper);color:var(--ink)}
+.wk-top{text-align:center}
+.bignum{font-size:var(--t-hero);font-weight:600;letter-spacing:-.045em;line-height:1.05;margin-top:12px}
 /* the log bar sits *in* the paper, not on a white card */
-.quick{background:var(--sunk);border:1px solid var(--line);border-radius:18px;padding:12px;margin-top:32px;display:flex;flex-direction:column;gap:10px}
+.quick{background:var(--sunk);border:1px solid var(--line);border-radius:18px;padding:12px;margin-top:30px;display:flex;flex-direction:column;gap:10px}
 .quick-top{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
 .quick-top input{border:0;background:none;font:inherit;font-size:15px;padding:0;min-width:0;width:100%}
 .quick-top input:focus{outline:none}
@@ -118,9 +271,9 @@ summary.act{color:var(--act)}
 .quick-top .cur{color:var(--faint);font-size:15px}
 .quick-row{display:flex;gap:8px}
 .quick-row select{flex:1;min-width:0}
-.rhythmline{display:flex;align-items:center;gap:10px;padding:10px 4px}
-.rhythmline .nm{font-size:14px}
-.rhythmline .bar{width:74px;flex-shrink:0}
+/* ---------- bulk entry ---------- */
+.brow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;align-items:center;margin-bottom:8px}
+.brow .amt{max-width:140px}
 
 /* ---------- rhythms ---------- */
 .rcard{padding:16px 18px;display:flex;flex-direction:column;gap:11px}
@@ -152,6 +305,16 @@ summary.act{color:var(--act)}
 /* ---------- chart ---------- */
 .chartbox{position:relative}
 .chartbox svg{width:100%;display:block;touch-action:none}
+/* Below ~600px the 640-unit viewBox squeezes the axis labels past legibility.
+   Scroll the plot at a readable size instead of shrinking it into noise —
+   "View as table" underneath stays the accessible route either way. */
+@media (max-width:600px){
+  .chartbox{overflow-x:auto;scrollbar-width:thin}
+  .chartbox svg{min-width:560px}
+  .chartbox .tip{display:none!important}
+}
+.charthead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 12px;margin-bottom:6px}
+.charthead h3{font-size:15px;font-weight:600}
 .tip{position:absolute;top:6px;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:12px;box-shadow:var(--shadow);white-space:nowrap;display:none}
 .tip h4{margin:0 0 5px;font-size:12px;font-weight:600}
 .tip .r{display:flex;align-items:center;gap:8px;margin-top:3px}
@@ -162,16 +325,54 @@ summary.act{color:var(--act)}
 .tbl td{padding:4px 12px 4px 0;border-top:1px solid var(--line)}
 .scroll{overflow-x:auto}
 
+/* The slower rooms. On a phone they leave the top bar entirely and wait at the
+   foot of the page — you visit the constitution quarterly, not hourly, and the
+   bar is better spent on the wordmark than on a door you rarely open. */
+.footnav{display:none}
+.footlink{display:flex;align-items:center;width:100%;min-height:54px;padding:0 2px;
+  border:0;border-bottom:1px solid var(--line);background:none;
+  font-size:15px;color:var(--ink);cursor:pointer;text-align:left}
+.footlink .go{margin-left:auto;color:var(--faint);font-size:18px;line-height:1}
+.footlink[aria-current="page"]{font-weight:600}
+.footlink[aria-current="page"] .go{color:var(--ink)}
+
 .foot{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:var(--faint)}
 
+/* ---------- responsive ----------
+   The type scale, gutters and grids above are already fluid, so what is left
+   here is only what genuinely changes *shape* at a given width. */
 @media (max-width:760px){
-  .wrap{padding:24px 16px 80px}
-  .g3,.g2{grid-template-columns:1fr}
-  .bignum{font-size:52px}
-  .topbar-in{padding:10px 16px}
-  .quick-row{flex-direction:column}
+  .wall{grid-template-columns:1fr}
+  .quick-row{flex-direction:column;align-items:stretch}
+  .quick-row .btn{width:100%}
+  .brow{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
+  .brow .amt{max-width:none}
+  .led{padding:10px var(--pad-card)}
+  .dbody{padding:0 var(--pad-card) 16px}
+  details>summary{padding:13px var(--pad-card)}
+  .sec{margin-top:30px}
+  .rfig{margin-left:0}
+  .rtop{flex-wrap:wrap}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:600px){
+  /* the bar becomes wordmark + sign out; every destination moves to the foot,
+     and the wordmark is the way Home */
+  .brand{display:block;margin-right:0}
+  .navlink{display:none}
+  .footnav{display:block;margin-top:44px;border-top:1px solid var(--line)}
+  /* the last footlink's rule already closes the list — don't draw a second one */
+  .footnav + .foot{margin-top:26px;border-top:0;padding-top:0}
+  .cadhead{margin:22px 0 10px}
+  .foot{flex-direction:column;align-items:flex-start;gap:10px}
+  .tag{margin-left:4px}
+  /* the sheet becomes a bottom sheet you can reach with a thumb */
+  .sheet{top:auto;bottom:0;left:0;transform:none;width:100%;max-width:none;max-height:92vh;
+    border-radius:22px 22px 0 0;padding:18px var(--gutter) calc(26px + env(safe-area-inset-bottom));
+    animation:slide .22s ease}
+  .amtbig{padding:18px 0 20px}
+  .amtbig input{font-size:40px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 <div id="app"></div>
@@ -233,7 +434,10 @@ function periodLabel(cad, s){
 }
 
 /* ============ state ============ */
-let db = null, route = "week", banner = "", authed = false, entryKind = "expense";
+let db = null, route = "home", banner = "", authed = false, entryKind = "expense";
+let sheet = null; // {kind, bookId} — the open action sheet, or null
+const STAGE_LABEL = {seeded:"Seeded",probation:"On probation","self-funding":"Self-funding",contributing:"Contributing","wound-down":"Wound down"};
+const STAGE_CLS = {seeded:"p-warn",probation:"p-warn","self-funding":"p-teal",contributing:"p-up","wound-down":"p-mute"};
 const openIds = new Set();
 
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
@@ -284,21 +488,38 @@ function historyStrip(r, n){
   h += '<i class="now" title="this ' + CAD_UNIT[r.cadence] + ', still open"></i>';
   return '<span class="strip">' + h + '</span>';
 }
-/** The weekly number is not declared — it is the sum of the weekly rhythms. */
-function weeklyNumber(bookId){
-  return rhythmsFor(bookId, "weekly").reduce((s,r)=> s + r.amount, 0);
+/** The number is not declared — it is the sum of the rhythms at that cadence. */
+function periodNumber(bookId, cad){
+  return rhythmsFor(bookId, cad).reduce((s,r)=> s + r.amount, 0);
 }
-function weekSpend(bookId, d){
-  const s = iso(weekStart(d)), e = iso(addDays(weekStart(d),6));
-  const weeklyIds = new Set(rhythmsFor(bookId,"weekly").map(r=>r.id));
+function weeklyNumber(bookId){ return periodNumber(bookId, "weekly"); }
+
+/** A book runs on the finest beat it actually keeps. Personal is weekly; a
+    venture whose rhythms are payroll and tax set-aside is monthly. */
+function bookCadence(bookId){
+  for(const c of CADENCES) if(rhythmsFor(bookId, c).length) return c;
+  return "weekly";
+}
+function periodSpend(bookId, cad, d){
+  const ps = periodStart(cad, d);
+  const s = iso(ps), e = iso(periodEnd(cad, ps));
+  const ids = new Set(rhythmsFor(bookId, cad).map(r=>r.id));
   let sum = 0;
   for(const t of db.transactions){
     if(t.bookId!==bookId || t.kind!=="expense" || t.wallet!=="operating") continue;
     if(t.date < s || t.date > e || t.projectId) continue;
-    if(t.rhythmId && !weeklyIds.has(t.rhythmId)) continue; // slower rhythms aren't the week's business
+    if(t.rhythmId && !ids.has(t.rhythmId)) continue; // other cadences aren't this period's business
     sum += t.amount;
   }
   return sum;
+}
+function weekSpend(bookId, d){ return periodSpend(bookId, "weekly", d); }
+/** "The week of Aug 10 – Aug 16", "August", "Q3 2026", "2026". */
+function periodRange(cad, ps){
+  if(cad==="weekly") return "The week of "+pretty(iso(ps))+" – "+pretty(iso(addDays(ps,6)));
+  if(cad==="monthly") return ps.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  if(cad==="quarterly") return "Q"+(Math.floor(ps.getMonth()/3)+1)+" "+ps.getFullYear();
+  return String(ps.getFullYear());
 }
 
 /* ============ money math ============ */
@@ -368,7 +589,7 @@ function rhythmOptions(bookId, cad, selected){
 /* ============ views ============ */
 function loginView(){
   return '<div class="login"><div class="login-in">'+
-    '<h1>Moneymeter</h1><p class="tag">A constitution for money.</p>'+
+    '<h1>MoneyMeter</h1><p class="tag">A constitution for money.</p>'+
     '<form class="card" data-a="login">'+
       '<label class="label" for="pw">Password</label>'+
       '<input class="field" id="pw" name="password" type="password" autofocus placeholder="Enter password" autocomplete="current-password">'+
@@ -378,135 +599,281 @@ function loginView(){
   '</div></div>';
 }
 
+/* Three items, always. Books are reached by tapping a card, so ten ventures
+   never wrap the bar. */
 function navView(){
-  const main = [{r:"week",l:"This Week"},{r:"rhythms",l:"Rhythms"}];
-  const books = db.books.map(b=>({r:"book:"+b.id,l:b.name}));
-  const slow = [{r:"constitution",l:"Constitution"},{r:"meeting",l:"Board Meeting"}];
-  const btn = x => '<button class="navlink" data-go="'+x.r+'"'+(route===x.r?' aria-current="page"':"")+'>'+esc(x.l)+'</button>';
+  const links = [{r:"home",l:"Home"},{r:"constitution",l:"Constitution"},{r:"meeting",l:"Board Meeting"}];
+  const cur = (route.startsWith("book:") || route.startsWith("week:")) ? "home" : route;
+  const btn = x => '<button class="navlink" data-go="'+x.r+'"'+(cur===x.r?' aria-current="page"':"")+'>'+esc(x.l)+'</button>';
+  // the destinations scroll if they must; Sign out stays put and never gets
+  // pushed off the edge with them
   return '<header class="topbar"><div class="topbar-in">'+
-    '<span class="brand">Moneymeter</span>'+
-    main.map(btn).join("") + '<span class="navsep"></span>' +
-    books.map(btn).join("") + '<span class="navsep"></span>' +
-    slow.map(btn).join("") +
+    '<button class="brand" style="border:0;background:none;padding:0;cursor:pointer" data-go="home">MoneyMeter</button>'+
+    '<nav class="navscroll">'+links.map(btn).join("")+'</nav>'+
     '<button class="signout" data-a="logout">Sign out</button></div></header>';
 }
 
-/* ---- This Week: log against a rhythm, nothing else ---- */
-function weekView(){
-  const book = db.books.find(b=>b.kind==="personal") || db.books[0];
-  const t = today(), ws = weekStart(t);
-  const num = weeklyNumber(book.id), spent = weekSpend(book.id, t);
+/* The three ways money moves, wherever they appear. Each button carries its
+   word: Spend / Receive / Move. The glyph is decoration, the label is the
+   affordance — nobody should have to guess what "⇄" charges. */
+const ACT_ICON = {
+  move:'<path d="M4 8h13M13 4l4 4-4 4M17 15H4M8 11l-4 4 4 4"/>',
+  out:'<path d="M4 10h12"/>',
+  in:'<path d="M10 4v12M4 10h12"/>'
+};
+const ACTIONS = [
+  {k:"move", kind:"transfer", label:"Move",    hint:"Move money between wallets"},
+  {k:"out",  kind:"expense",  label:"Spend",   hint:"Log a spend"},
+  {k:"in",   kind:"income",   label:"Receive", hint:"Record money received"}
+];
+function actionRow(bookId, style){
+  const b = bookId ? ' data-book="'+bookId+'"' : "";
+  return '<div class="acts"'+(style?' style="'+style+'"':"")+'>'+ ACTIONS.map(a=>
+    '<button class="actbtn ib-'+a.k+'" data-a="opensheet" data-v="'+a.kind+'"'+b+' title="'+a.hint+'">'+
+      '<svg viewBox="0 0 20 20" aria-hidden="true">'+ACT_ICON[a.k]+'</svg>'+a.label+'</button>').join("")+'</div>';
+}
+
+/* ---- Home: the card wall. Every book is a card; every book has a week. ---- */
+function homeView(){
+  const t = today();
+  const books = db.books.filter(b=>b.stage!=="wound-down");
+  const anyWeekly = books.some(b=>rhythmsFor(b.id).length > 0);
+
+  const empty = anyWeekly ? "" :
+    '<div class="flat" style="margin-bottom:20px;padding:20px;font-size:14px;color:var(--sub)">'+
+      'No rhythms yet. No book’s number is declared — each is the sum of the rhythms you set for it. Open a book to set its first one.</div>';
+
+  return '<div class="home-top">'+ actionRow() +'</div>'+
+    empty +
+    '<div class="wall">'+books.map(b=>bookCard(b,t)).join("")+'</div>'+
+    '<p class="tiny faint" style="margin-top:44px;text-align:center;line-height:1.6">'+
+      'Tap a card to open its book. Each book holds its own rhythms; the board meeting holds the questions.</p>';
+}
+
+function rhythmRow(r, ws){
+  const s = rhythmSpent(r, ws), p = r.amount>0 ? Math.min(100, Math.round(s/r.amount*100)) : 0;
+  const o = s > r.amount;
+  return '<div class="rhythmline"><span class="nm trunc">'+esc(r.name)+'</span>'+
+    '<span class="fig tnum small'+(o?'" style="color:var(--down)':"")+'">'+money(s)+
+      '<span class="faint"> / '+money(r.amount)+'</span></span>'+
+    '<span class="bar"><i style="width:'+(o?100:p)+'%;background:'+(o?"var(--down)":p>=85?"var(--warn)":"var(--up)")+'"></i></span></div>';
+}
+
+/* Segment colours. Deliberately none of the state colours — green and red mean
+   "holding" and "over" everywhere else in this app, and a category that merely
+   happens to be third in the list must not borrow that meaning. Ordered so
+   neighbouring segments sit far apart in hue. */
+const SEG_COLORS = ["#7FB8F5","#F49CC0","#6FC9D8","#F5B978","#A5A1E6","#C79BD8"];
+const SEG_OTHER = "#C9C7C1";
+
+/* Where the period actually went: one entry per rhythm that was charged, plus
+   whatever was spent outside them all. Mirrors periodSpend()'s filter exactly,
+   so the segments always sum to the number on the card. */
+function bookSegments(bookId, cad, d){
+  const ps = periodStart(cad, d);
+  const s = iso(ps), e = iso(periodEnd(cad, ps));
+  const rs = rhythmsFor(bookId, cad);
+  const idx = new Map(rs.map((r,i)=>[r.id,i]));
+  const sums = rs.map(()=>0);
+  let loose = 0;
+  for(const t of db.transactions){
+    if(t.bookId!==bookId || t.kind!=="expense" || t.wallet!=="operating") continue;
+    if(t.date < s || t.date > e || t.projectId) continue;
+    if(t.rhythmId){
+      if(!idx.has(t.rhythmId)) continue; // another cadence's business
+      sums[idx.get(t.rhythmId)] += t.amount;
+    } else loose += t.amount;
+  }
+  // colour is keyed to the rhythm's own position, so it doesn't change hue
+  // when the sort order shifts week to week
+  const out = rs.map((r,i)=>({name:r.name, amount:sums[i], cap:r.amount, color:SEG_COLORS[i%SEG_COLORS.length]}))
+                .filter(x=>x.amount>0);
+  if(loose>0) out.push({name:"One-off", amount:loose, cap:0, color:SEG_OTHER});
+  return out.sort((a,c)=> c.amount-a.amount);
+}
+
+/* One book, at a glance. Name, what's left, where the period went — and the
+   whole card is the way in. */
+function bookCard(b, t){
+  const cad = bookCadence(b.id);
+  const num = periodNumber(b.id, cad), spent = periodSpend(b.id, cad, t);
+  const left = num - spent, over = left < 0;
+  const set = num > 0;
+
+  // Name and reading on one line; what the reading means underneath it.
+  // caption, then the number, then what the number means — read top to bottom
+  const head = '<h3>'+esc(b.name)+'</h3>'+
+    '<span class="go" aria-hidden="true">›</span>'+
+    (set
+      ? '<p class="bnum tnum"'+(over?' style="color:var(--down)"':"")+'>'+money(Math.abs(left))+'</p>'
+      : '<p class="bnum tnum faint">—</p>')+
+    '<p class="said">'+(set
+      ? (over ? money(spent)+' spent — over this '+CAD_UNIT[cad]
+              : money(spent)+' of '+money(num)+' this '+CAD_UNIT[cad])
+      : 'no rhythms set')+'</p>';
+
+  if(!set) return '<div class="bcard" data-go="week:'+b.id+'" role="button" tabindex="0" '+
+    'aria-label="Open '+esc(b.name)+'">'+head+
+    '<p class="tiny faint" style="margin-top:16px">Its number is the sum of its rhythms. Open it to set the first one.</p></div>';
+
+  const segs = bookSegments(b.id, cad, t);
+  // over the number, the bar is scaled to what was actually spent, so the
+  // proportions stay honest even once the track has run out
+  const denom = Math.max(num, spent, 1);
+  const bar = '<div class="segbar'+(over?" over":"")+'" role="img" aria-label="'+
+      esc(segs.map(s=>s.name+" "+money(s.amount)).join(", ") || "nothing logged")+'">'+
+    segs.map(s=>'<i style="width:'+(s.amount/denom*100).toFixed(2)+'%;background:'+s.color+'"></i>').join("")+
+  '</div>';
+
+  const MAXL = 4;
+  const shown = segs.slice(0,MAXL), rest = segs.slice(MAXL);
+  const lrow = (color,name,amount,cls) =>
+    '<div class="lrow'+(cls?" "+cls:"")+'"><span class="dot" style="background:'+color+'"></span>'+
+    '<span class="nm">'+esc(name)+'</span><span class="v tnum">'+money(amount)+'</span></div>';
+
+  let legend = shown.map(s=>lrow(s.color, s.name, s.amount, s.cap>0 && s.amount>s.cap ? "is-over" : "")).join("");
+  if(rest.length) legend += lrow("var(--line)", rest.length+" more", rest.reduce((a,c)=>a+c.amount,0), "rest");
+  // the unfilled track, named — the legend accounts for the whole bar
+  if(!over) legend += lrow("var(--sunk)", "Left", left, "rest");
+
+  return '<div class="bcard" data-go="week:'+b.id+'" role="button" tabindex="0" aria-label="Open '+esc(b.name)+'">'+
+    head + bar +
+    (segs.length ? '<div class="legend">'+legend+'</div>'
+                 : '<p class="tiny faint" style="margin-top:13px">Nothing logged this '+CAD_UNIT[cad]+' yet.</p>')+
+  '</div>';
+}
+
+/* ---- One book's period: the old home, scoped, on that book's own beat ---- */
+function weekBookView(id){
+  const books = db.books.filter(b=>b.stage!=="wound-down");
+  const i = books.findIndex(b=>b.id===id);
+  if(i < 0) return '<p class="sub">That book is gone. <button class="linkbtn neutral" data-go="home" style="color:var(--act)">All books \u2192</button></p>';
+  const book = books[i], t = today();
+  const cad = bookCadence(book.id), ps = periodStart(cad, t), unit = CAD_UNIT[cad];
+  const prev = books[(i - 1 + books.length) % books.length];
+  const next = books[(i + 1) % books.length];
+
+  const num = periodNumber(book.id, cad), spent = periodSpend(book.id, cad, t);
   const left = num - spent, over = left < 0;
   const pct = num>0 ? Math.min(100, Math.round(spent/num*100)) : 0;
-  const weeklies = rhythmsFor(book.id,"weekly");
+  const lines_r = rhythmsFor(book.id, cad);
 
-  const list = db.transactions
-    .filter(x=>x.bookId===book.id && x.kind==="expense" && x.wallet==="operating" && !x.projectId && x.date>=iso(ws))
-    .sort((a,b)=> a.date<b.date?1:-1);
+  const arrow = (b,g,l) => '<button class="sw-arrow" data-go="week:'+b.id+'" aria-label="'+l+'">'+g+'</button>';
+  const switcher = '<div class="switch">'+
+    (books.length>1 ? arrow(prev,"\u2039","Previous book") : '<span style="width:36px"></span>')+
+    '<div class="sw-name"><b class="trunc">'+esc(book.name)+'</b>'+
+      '<span class="tiny faint">'+(i+1)+' of '+books.length+'</span></div>'+
+    (books.length>1 ? arrow(next,"\u203a","Next book") : '<span style="width:36px"></span>')+
+  '</div>';
+
+  // the same three actions as home, already pointed at this book
+  const actions = actionRow(book.id, "justify-content:center;margin-top:22px");
 
   let head;
   if(num > 0){
     const col = over ? "var(--down)" : pct>=85 ? "var(--warn)" : "var(--up)";
     head = '<p class="bignum tnum"'+(over?' style="color:var(--down)"':"")+'>'+money(Math.abs(left))+'</p>'+
       '<p class="small sub" style="margin-top:6px">'+(over
-        ? '<span style="color:var(--down);font-weight:500">over the week’s rhythms</span>'
+        ? '<span style="color:var(--down);font-weight:500">over the '+unit+'\u2019s rhythms</span>'
         : 'left of <b class="tnum" style="color:var(--ink)">'+money(num)+'</b>')+'</p>'+
       '<div class="bar" style="width:220px;margin:20px auto 0"><i style="width:'+(over?100:pct)+'%;background:'+col+'"></i></div>';
   } else {
-    head = '<div class="flat" style="margin-top:24px;padding:20px;font-size:14px;color:var(--sub);text-align:left">'+
-      'No weekly rhythms yet. The week’s number isn’t declared — it’s the sum of the rhythms you set. '+
-      '<button class="linkbtn neutral" data-go="rhythms" style="color:var(--act)">Set your rhythms →</button></div>';
+    head = '<div class="flat" style="margin-top:22px;padding:20px;font-size:14px;color:var(--sub);text-align:left">'+
+      'No rhythms on this book. Its number isn\u2019t declared \u2014 it\u2019s the sum of the rhythms you set for it. '+
+      '<button class="linkbtn neutral" data-go="book:'+book.id+'" style="color:var(--act)">Set them on this book \u2192</button></div>';
   }
 
-  const quick = weeklies.length ? '<form class="quick" data-a="quicklog">'+
+  const quick = lines_r.length ? '<form class="quick" data-a="quicklog">'+
+      '<input type="hidden" name="bookId" value="'+book.id+'">'+
       '<div class="quick-top"><span class="cur">$</span>'+
-      '<input class="tnum" name="amount" inputmode="decimal" placeholder="0.00" required autocomplete="off"></div>'+
+      '<input class="tnum" name="amount" inputmode="decimal" placeholder="0.00" required autocomplete="off" aria-label="Amount"></div>'+
       '<div class="quick-row">'+
         '<select class="field" name="rhythmId" required>'+
-          '<option value="">Which rhythm?</option>'+ rhythmOptions(book.id,"weekly") +
-          '<option value="__none">One-off — outside the rhythms</option>'+
+          '<option value="">Which rhythm?</option>'+ rhythmOptions(book.id, cad) +
+          '<option value="__none">One-off \u2014 outside the rhythms</option>'+
         '</select>'+
         '<input class="field" name="note" placeholder="Note (optional)" style="flex:1">'+
         '<button class="btn btn-primary">Log it</button>'+
       '</div></form>' : "";
 
-  const lines = weeklies.length ? '<div class="sec">'+
-    '<p class="eyebrow" style="margin-bottom:6px">This week’s rhythms</p>'+
-    weeklies.map(r=>{
-      const s = rhythmSpent(r, ws), p = r.amount>0 ? Math.min(100, Math.round(s/r.amount*100)) : 0;
-      const o = s > r.amount;
-      return '<div class="rhythmline"><span class="nm grow trunc">'+esc(r.name)+'</span>'+
-        '<span class="bar"><i style="width:'+(o?100:p)+'%;background:'+(o?"var(--down)":p>=85?"var(--warn)":"var(--up)")+'"></i></span>'+
-        '<span class="tnum small'+(o?'" style="color:var(--down)':"")+'">'+money(s)+'<span class="faint"> / '+money(r.amount)+'</span></span></div>';
-    }).join("")+'</div>' : "";
+  const lines = lines_r.length ? '<div class="sec">'+
+    '<p class="eyebrow" style="margin-bottom:6px">This '+unit+'\u2019s rhythms</p>'+
+    lines_r.map(r=>rhythmRow(r, ps)).join("")+'</div>' : "";
 
-  const logged = list.length ? '<div class="sec"><p class="eyebrow" style="margin-bottom:6px">Logged this week</p>'+
-    '<div class="flat">'+list.map(x=>
-      '<div class="led"><span class="d">'+pretty(x.date)+'</span>'+
-      '<span class="grow trunc">'+esc(x.note || rhythmName(x.rhythmId) || "One-off")+
-        (x.rhythmId?'<span class="tag">'+esc(rhythmName(x.rhythmId))+'</span>':'<span class="tag">one-off</span>')+'</span>'+
-      '<span class="tnum">'+money(x.amount)+'</span>'+
-      '<button class="linkbtn" data-a="deltxn" data-id="'+x.id+'">×</button></div>').join("")+'</div></div>' : "";
+  const logged = db.transactions
+    .filter(x=>x.bookId===book.id && x.kind==="expense" && x.wallet==="operating" && !x.projectId && x.date>=iso(ps))
+    .sort((a,b2)=> a.date<b2.date?1:-1);
+  const list = logged.length ? '<div class="sec"><p class="eyebrow" style="margin-bottom:6px">Logged this '+unit+'</p>'+
+    '<div class="flat">'+logged.map(x=>{
+      const rn = rhythmName(x.rhythmId), desc = x.note || rn || "One-off";
+      // the tag only earns its place when it says something the text doesn't
+      const tag = x.rhythmId ? (rn && rn!==desc ? rn : "") : "one-off";
+      return '<div class="led"><span class="d">'+pretty(x.date)+'</span>'+
+        '<span class="grow trunc">'+esc(desc)+(tag?'<span class="tag">'+esc(tag)+'</span>':"")+'</span>'+
+        '<span class="tnum">'+money(x.amount)+'</span>'+
+        '<button class="linkbtn" data-a="deltxn" data-id="'+x.id+'">\u00d7</button></div>';
+    }).join("")+'</div></div>' : "";
 
-  return '<div class="week"><div class="week-top">'+
-    '<p class="eyebrow">The week of '+pretty(iso(ws))+' – '+pretty(iso(addDays(ws,6)))+'</p>'+head+'</div>'+
-    quick + lines + logged +
-    '<p class="tiny faint" style="margin-top:44px;text-align:center;line-height:1.6">Everything slower lives behind its own cadence — rhythms hold the habits, books hold the wallets, the board meeting holds the questions.</p>'+
+  return '<div class="wk">'+
+    switcher +
+    '<div class="wk-top"><p class="eyebrow">'+periodRange(cad, ps)+'</p>'+head+actions+'</div>'+
+    quick + lines + list +
+    '<div class="sec" style="text-align:center"><button class="btn btn-ghost btn-sm" data-go="book:'+book.id+'">'+
+      'Wallets, projects &amp; full ledger \u2192</button></div>'+
   '</div>';
 }
 
-/* ---- Rhythms: the habit system ---- */
-function rhythmsView(){
+/* ---- Rhythms, scoped to one book. They live on the book they charge, not in
+   a single global list. Whether they held is the board meeting's business. ---- */
+function rhythmsSection(bookId){
   const t = today();
-  const all = rhythmsFor();
+  const all = rhythmsFor(bookId);
   const flagged = all.map(r=>({r, rev:rhythmReview(r)})).filter(x=>x.rev);
+  const cads = CADENCES.filter(c=>rhythmsFor(bookId,c).length);
 
-  const summary = '<div class="grid g3">'+
-    ['weekly','monthly','quarterly'].map(cad=>{
-      const rs = rhythmsFor(null,cad);
+  const summary = cads.length ? '<div class="gstat">'+
+    cads.map(cad=>{
+      const rs = rhythmsFor(bookId,cad);
       const total = rs.reduce((s,r)=>s+r.amount,0);
-      return '<div class="card" style="padding:16px 18px"><p class="label">'+CAD_LABEL[cad]+'</p>'+
-        '<p class="tnum" style="font-size:22px;font-weight:600">'+money(total)+'</p>'+
-        '<p class="tiny faint" style="margin-top:3px">'+rs.length+' rhythm'+(rs.length===1?"":"s")+' per '+CAD_UNIT[cad]+'</p></div>';
-    }).join("")+'</div>';
+      return '<div class="stat"><p class="label">'+CAD_LABEL[cad]+'</p>'+
+        '<p class="n tnum">'+money(total)+'</p>'+
+        '<p class="why">'+rs.length+' rhythm'+(rs.length===1?"":"s")+' per '+CAD_UNIT[cad]+'</p></div>';
+    }).join("")+'</div>' : "";
 
-  const review = flagged.length ? '<div class="sec"><h2 class="sec-h">Earned a review</h2>'+
-    '<p class="sec-r">Overspent in most of the last few periods. That is not a failure of will — it is a sign the number was a bad guess. Take it to the board meeting.</p>'+
-    '<div class="card">'+flagged.map(x=>
-      '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:600">'+esc(x.r.name)+'</p>'+
-      '<p class="tiny faint">'+bookName(x.r.bookId)+' · over in '+x.rev.missed+' of the last '+x.rev.of+' '+CAD_UNIT[x.r.cadence]+'s</p></div>'+
-      '<span class="pill p-warn">Review</span></div>').join("")+'</div></div>' : "";
+  const review = flagged.length ? '<div class="card" style="padding:14px 18px;margin-top:12px;border-color:rgba(255,149,0,.35);background:rgba(255,149,0,.06)">'+
+    '<p class="small"><b>'+flagged.length+' rhythm'+(flagged.length===1?" has":"s have")+' earned a review.</b> '+
+    '<span class="sub">Consistent overspend is evidence the number was a bad guess. It is decided at the meeting, not here.</span> '+
+    '<button class="linkbtn neutral" data-go="meeting" style="color:var(--act)">Take it to the board \u2192</button></p></div>' : "";
 
-  const groups = CADENCES.map(cad=>{
-    const rs = rhythmsFor(null,cad);
-    if(!rs.length) return "";
+  const groups = cads.map(cad=>{
+    const rs = rhythmsFor(bookId,cad);
     const total = rs.reduce((s,r)=>s+r.amount,0);
     return '<div class="cadhead"><h3>'+CAD_LABEL[cad]+'</h3>'+
       '<span class="t tnum">'+money(total)+' / '+CAD_UNIT[cad]+'</span></div>'+
       '<div class="grid" style="gap:10px">'+rs.map(r=>rhythmCard(r,t)).join("")+'</div>';
   }).join("");
 
-  const addForm = det("r-new", "+ Set a new rhythm",
+  const addForm = det("r-new-"+bookId, "+ Set a new rhythm on this book",
+    '<input type="hidden" name="bookId" value="'+bookId+'">'+
     '<div class="grid g2">'+
-      '<div><label class="label">What is it?</label><input class="field" name="name" placeholder="Groceries, rent, payroll…" required></div>'+
-      '<div><label class="label">Which book?</label><select class="field" name="bookId">'+
-        db.books.map(b=>'<option value="'+b.id+'">'+esc(b.name)+'</option>').join("")+'</select></div>'+
+      '<div><label class="label">What is it?</label><input class="field" name="name" placeholder="Groceries, rent, payroll\u2026" required></div>'+
       '<div><label class="label">Amount per period</label><input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" required></div>'+
       '<div><label class="label">Rhythm</label><select class="field" name="cadence">'+
         CADENCES.map(c=>'<option value="'+c+'"'+(c==="weekly"?" selected":"")+'>'+CAD_LABEL[c]+'</option>').join("")+'</select></div>'+
     '</div>'+
     '<div style="margin-top:14px"><label class="label">Which kind?</label><div class="grid g2">'+
-      '<label class="flat" style="padding:12px 14px;display:block;cursor:pointer"><span class="row" style="gap:8px"><input type="radio" name="type" value="flexible" checked><b class="small">A ceiling — stay under it</b></span>'+
+      '<label class="flat" style="padding:12px 14px;display:block;cursor:pointer"><span class="row" style="gap:8px"><input type="radio" name="type" value="flexible" checked><b class="small">A ceiling \u2014 stay under it</b></span>'+
         '<span class="tiny faint" style="display:block;margin-top:4px;padding-left:24px">Groceries, gas, dinner out. You keep it below the line.</span></label>'+
-      '<label class="flat" style="padding:12px 14px;display:block;cursor:pointer"><span class="row" style="gap:8px"><input type="radio" name="type" value="fixed"><b class="small">An obligation — pay it</b></span>'+
+      '<label class="flat" style="padding:12px 14px;display:block;cursor:pointer"><span class="row" style="gap:8px"><input type="radio" name="type" value="fixed"><b class="small">An obligation \u2014 pay it</b></span>'+
         '<span class="tiny faint" style="display:block;margin-top:4px;padding-left:24px">Rent, tithe, payroll, subscriptions. It goes out on schedule.</span></label>'+
     '</div></div>'+
     '<button class="btn btn-primary" style="margin-top:16px">Set the rhythm</button>', "addrhythm", "card", "act");
 
-  return phead("Rhythms", "The bold guess that life runs on a beat: a set list of systems, each with its own amount and cadence. You live inside them and log against them. When one is consistently overspent, it has earned a review — the number was wrong, not you.") +
+  return '<div class="sec"><h2 class="sec-h">Rhythms</h2>'+
+    '<p class="sec-r">The standing habits charged to this book \u2014 each with an amount and a cadence. This book\u2019s number is the sum of its rhythms at its finest cadence; you never declare it, you set these.</p>'+
     summary + review + groups +
-    (all.length ? "" : '<div class="card empty" style="margin-top:20px">No rhythms yet. Set the first one below — start with the weekly ones, since those become your weekly number.</div>') +
-    '<div class="sec">'+addForm+'</div>';
+    (all.length ? "" : '<div class="card empty" style="margin-top:12px">No rhythms on this book yet. Set the first one below.</div>') +
+    '<div style="margin-top:20px">'+addForm+'</div></div>';
 }
 
 function rhythmCard(r, t){
@@ -529,7 +896,7 @@ function rhythmCard(r, t){
 
   return '<div class="card rcard">'+
     '<div class="rtop"><div class="grow"><p class="rname">'+esc(r.name)+'</p>'+
-      '<p class="rmeta">'+bookName(r.bookId)+' · '+money(r.amount)+' per '+CAD_UNIT[r.cadence]+' · '+(fixed?"obligation":"ceiling")+'</p></div>'+
+      '<p class="rmeta">'+money(r.amount)+' per '+CAD_UNIT[r.cadence]+' · '+(fixed?"obligation":"ceiling")+'</p></div>'+
       '<div class="rfig"><p class="n tnum"'+(over?' style="color:var(--down)"':"")+'>'+money(spent)+'</p>'+
       '<p class="tiny faint">this '+CAD_UNIT[r.cadence]+'</p></div></div>'+
     (fixed ? "" : '<div class="bar"><i style="width:'+(over?100:pct)+'%;background:'+(over?"var(--down)":pct>=85?"var(--warn)":"var(--up)")+'"></i></div>')+
@@ -549,6 +916,74 @@ function rhythmCard(r, t){
   '</div>';
 }
 
+/* ---- The action sheet: one amount, then where it belongs ---- */
+function projectOptions(bookId){
+  return db.projects.filter(p=>p.bookId===bookId && p.status==="active")
+    .map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+}
+function bucketField(venture){
+  return '<div data-bucket'+(venture?"":' style="display:none"')+'><label class="label">Bucket</label>'+
+    '<select class="field" name="bucket"'+(venture?"":" disabled")+'>'+
+      '<option value="burn">Burn — fixed</option><option value="fuel">Fuel — growth ceiling</option>'+
+      '<option value="one-time">One-time — from surplus</option></select></div>';
+}
+function sheetView(){
+  if(!sheet) return "";
+  const kind = sheet.kind;
+  const books = db.books.filter(b=>b.stage!=="wound-down");
+  if(!books.length) return "";
+  const bid = books.some(b=>b.id===sheet.bookId) ? sheet.bookId : books[0].id;
+  const bk = db.books.find(b=>b.id===bid), venture = bk.kind==="venture";
+
+  const title = kind==="income" ? "Received" : kind==="transfer" ? "Move money" : "Spend";
+  const role  = kind==="income" ? "Money arriving in a book — say which one, and which wallet it lands in."
+              : kind==="transfer" ? "Between wallets inside one book. Wealth only ever receives."
+              : "Charged to a rhythm where it belongs, or logged as a one-off.";
+  const cta   = kind==="income" ? "Record it" : kind==="transfer" ? "Move it" : "Log the spend";
+
+  const bookField = '<div><label class="label">Which book?</label><select class="field" name="bookId">'+
+    books.map(b=>'<option value="'+b.id+'"'+(b.id===bid?" selected":"")+'>'+
+      esc(b.name)+(b.kind==="venture"?" · venture":"")+'</option>').join("")+'</select></div>';
+
+  let fields;
+  if(kind==="income"){
+    fields = bookField +
+      '<div><label class="label">Source</label><input class="field" name="source" placeholder="Client, salary, the draw…"></div>'+
+      '<div><label class="label">Into which wallet?</label><select class="field" name="wallet">'+
+        '<option value="operating">Operating</option><option value="buffer">Buffer</option>'+
+        '<option value="wealth">Wealth</option></select></div>';
+  } else if(kind==="transfer"){
+    fields = bookField +
+      '<div><label class="label">From</label><select class="field" name="wallet">'+
+        '<option value="operating">Operating</option><option value="buffer">Buffer</option></select></div>'+
+      '<div><label class="label">To</label><select class="field" name="toWallet">'+
+        '<option value="buffer">Buffer</option><option value="operating">Operating</option>'+
+        '<option value="wealth">Wealth</option></select></div>'+
+      '<div><label class="label">Note</label><input class="field" name="note" placeholder="Buffer fill, wealth step…"></div>';
+  } else {
+    fields = bookField +
+      '<div><label class="label">Against which rhythm?</label><select class="field" name="rhythmId">'+
+        '<option value="__none">One-off — outside the rhythms</option>'+ rhythmOptions(bid) +'</select></div>'+
+      '<div><label class="label">Against a project</label><select class="field" name="projectId">'+
+        '<option value="">— none —</option>'+ projectOptions(bid) +'</select></div>'+
+      bucketField(venture) +
+      '<div><label class="label">Note</label><input class="field" name="note" placeholder="What was it?"></div>';
+  }
+
+  return '<div class="scrim" data-a="closesheet"></div>'+
+    '<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="'+title+'">'+
+      '<div class="sheet-head"><h2>'+title+'</h2>'+
+        '<button class="sheet-x" data-a="closesheet" aria-label="Close">×</button></div>'+
+      '<p class="role">'+role+'</p>'+
+      '<form data-a="sheetentry"><input type="hidden" name="kind" value="'+kind+'">'+
+        (kind==="expense"?'<input type="hidden" name="wallet" value="operating">':"")+
+        '<div class="amtbig"><span class="cur">$</span>'+
+          '<input name="amount" size="4" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Amount" required></div>'+
+        '<div class="fset">'+fields+'</div>'+
+        '<button class="btn btn-primary">'+cta+'</button>'+
+      '</form></div>';
+}
+
 /* ---- Book: wallets, one entry form, projects, ledger ---- */
 function bookView(id){
   const book = db.books.find(b=>b.id===id);
@@ -558,10 +993,8 @@ function bookView(id){
   const projects = db.projects.filter(p=>p.bookId===book.id && p.status==="active");
   const ended = db.projects.filter(p=>p.bookId===book.id && p.status==="ended");
   const ledger = db.transactions.filter(t=>t.bookId===book.id).sort((a,b)=> a.date<b.date?1:-1).slice(0,16);
-  const bookRhythms = rhythmsFor(book.id);
 
-  const stageLabel = {seeded:"Seeded",probation:"On probation","self-funding":"Self-funding",contributing:"Contributing","wound-down":"Wound down"};
-  const stageCls = {seeded:"p-warn",probation:"p-warn","self-funding":"p-teal",contributing:"p-up","wound-down":"p-mute"};
+  const stageLabel = STAGE_LABEL, stageCls = STAGE_CLS;
   let pills = "";
   if(venture && book.stage) pills += '<span class="pill '+stageCls[book.stage]+'">'+stageLabel[book.stage]+'</span>';
   if(venture && book.stage!=="wound-down"){
@@ -570,13 +1003,15 @@ function bookView(id){
     pills += ' <span class="pill tnum '+cls+'">'+(r===Infinity?"No burn set":r.toFixed(1)+" mo runway")+'</span>';
   }
 
-  const wallets = '<div class="grid g3">'+
-    '<div class="card" style="padding:18px"><p class="label">Operating</p><p class="tnum" style="font-size:24px;font-weight:600">'+money(bal.operating)+'</p><p class="tiny faint" style="margin-top:4px">Where the '+(venture?"business":"week")+' happens. Empties by design.</p></div>'+
-    '<div class="card" style="padding:18px"><p class="label">Buffer</p><p class="tnum" style="font-size:24px;font-weight:600">'+money(bal.buffer)+'</p>'+
+  const wallets = '<div class="gstat">'+
+    '<div class="stat"><p class="label">Operating</p><p class="n tnum">'+money(bal.operating)+'</p>'+
+      '<p class="why">Where the '+(venture?"business":"week")+' happens. Empties by design.</p></div>'+
+    '<div class="stat"><p class="label">Buffer</p><p class="n tnum">'+money(bal.buffer)+'</p>'+
       (book.bufferTarget>0
-        ? '<div class="bar" style="margin-top:10px"><i style="width:'+bp+'%;background:'+(bp>=100?"var(--up)":"var(--teal)")+'"></i></div><p class="tiny faint" style="margin-top:5px">'+bp+'% of '+money(book.bufferTarget)+' target</p>'
-        : '<p class="tiny faint" style="margin-top:4px">No target set yet.</p>')+'</div>'+
-    '<div class="card" style="padding:18px"><p class="label">Wealth</p><p class="tnum" style="font-size:24px;font-weight:600">'+money(bal.wealth)+'</p><p class="tiny faint" style="margin-top:4px">One-way valve. Only ever steps upward.</p></div>'+
+        ? '<div class="bar"><i style="width:'+bp+'%;background:'+(bp>=100?"var(--up)":"var(--teal)")+'"></i></div><p class="why">'+bp+'% of '+money(book.bufferTarget)+' target</p>'
+        : '<p class="why">No target set yet.</p>')+'</div>'+
+    '<div class="stat"><p class="label">Wealth</p><p class="n tnum">'+money(bal.wealth)+'</p>'+
+      '<p class="why">One-way valve. Only ever steps upward.</p></div>'+
   '</div>';
 
   // ONE entry form with a segmented type switch
@@ -612,12 +1047,21 @@ function bookView(id){
       '<button class="btn btn-primary" style="margin-top:14px">'+(entryKind==="income"?"Record income":entryKind==="transfer"?"Move it":"Log the spend")+'</button>'+
     '</form></div>';
 
-  const rhythmSummary = bookRhythms.length
-    ? '<div class="card" style="padding:16px 18px"><div class="row"><div class="grow">'+
-      '<p class="label" style="margin-bottom:2px">Rhythms on this book</p>'+
-      '<p class="small sub">'+bookRhythms.length+' set · '+money(impliedBurn(book.id))+' of fixed obligation per month</p></div>'+
-      '<button class="btn btn-ghost btn-sm" data-go="rhythms">Open rhythms</button></div></div>'
-    : '<div class="card empty">No rhythms on this book yet. <button class="linkbtn neutral" data-go="rhythms" style="color:var(--act)">Set them →</button></div>';
+  // Many spends in one sitting — a stack of receipts, one commit.
+  const bulkRow = '<div class="brow" data-row>'+
+    '<input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" autocomplete="off">'+
+    '<select class="field" name="rhythmId"><option value="__none">One-off</option>'+ rhythmOptions(book.id) +'</select>'+
+    '<input class="field" name="note" placeholder="What was it?" autocomplete="off">'+
+    '<input class="field" name="date" type="date" value="'+iso(today())+'">'+
+  '</div>';
+  const bulk = det("bulk-"+book.id, "+ Add many at once",
+    '<input type="hidden" name="bookId" value="'+book.id+'">'+
+    '<p class="tiny faint" style="margin-bottom:12px">Every row is a spend from operating. Leave a row blank and it is ignored.</p>'+
+    '<div data-rows>'+bulkRow+bulkRow+bulkRow+'</div>'+
+    '<div class="row" style="gap:10px;margin-top:6px">'+
+      '<button type="button" class="btn btn-ghost btn-sm" data-a="addrow">+ Another row</button>'+
+      '<button class="btn btn-primary btn-sm">Log them all</button></div>', "batchlog", "card", "act");
+
 
   const projRows = projects.map(p=>{
     const pb = projectBalance(p);
@@ -675,13 +1119,15 @@ function bookView(id){
         : "")+
       '<button class="btn btn-primary">Save</button></div>', "updatebook", "card");
 
-  return '<div class="phead"><div class="row" style="flex-wrap:wrap;gap:10px"><h1>'+esc(book.name)+'</h1>'+pills+'</div>'+
-      '<p class="role">Where this book’s money actually sits, and everything that moved it. Habits live under Rhythms; this page is the wallets and the record.</p>'+
+  return '<button class="backlink" data-go="week:'+book.id+'">‹ '+esc(book.name)+'</button>'+
+    '<div class="phead"><div class="row" style="flex-wrap:wrap;gap:10px"><h1>'+esc(book.name)+'</h1>'+pills+'</div>'+
+      '<p class="role">Everything about this book in one place: its rhythms, its three wallets, its projects, and the record of every movement.</p>'+
       (venture && book.seedCeiling?'<p class="small sub" style="margin-top:8px">Seed ceiling <b class="tnum" style="color:var(--ink)">'+money(book.seedCeiling)+'</b>'+(book.seedDeadline?" — to prove itself by "+esc(book.seedDeadline)+".":".")+'</p>':"")+
     '</div>'+
     wallets +
-    '<div class="sec"><h2 class="sec-h">Add an entry</h2><p class="sec-r">One place for everything that moves money in this book.</p>'+entry+'</div>'+
-    '<div class="sec"><h2 class="sec-h">Rhythms</h2><p class="sec-r">The standing habits charged to this book.</p>'+rhythmSummary+'</div>'+
+    '<div class="sec"><h2 class="sec-h">Add an entry</h2><p class="sec-r">One place for everything that moves money in this book.</p>'+entry+
+      '<div style="margin-top:12px">'+bulk+'</div></div>'+
+    rhythmsSection(book.id) +
     '<div class="sec"><h2 class="sec-h">Projects</h2><p class="sec-r">A fund with a funding rule and an end.</p>'+projRows+
       (ended.length?'<p class="tiny faint" style="margin-bottom:10px">Ended: '+ended.map(p=>esc(p.name)).join(", ")+'</p>':"")+projAdd+'</div>'+
     '<div class="sec"><h2 class="sec-h">Ledger</h2><p class="sec-r">The last '+ledger.length+' movements.</p><div class="card">'+ledRows+'</div></div>'+
@@ -699,9 +1145,9 @@ function constitutionView(){
       '<span class="pill '+cls+'">'+a.status+'</span></div>';
   }).join("") : '<p class="empty">No amendments. The rules are holding.</p>';
 
-  const weeklyTotal = db.books.filter(b=>b.kind==="personal").reduce((s,b)=>s+weeklyNumber(b.id),0);
+  const weeklyTotal = db.books.reduce((s,b)=>s+weeklyNumber(b.id),0);
 
-  return phead("The Constitution", "The standing answers — the ones you decided once so they stop asking. When it and an impulse conflict, the constitution wins. When it and reality conflict, amend it here, deliberately, never by drift.") +
+  return phead("The Constitution", "The standing answers — the ones you decided once so they stop asking: what you give, what you draw, how surplus splits, and the rhythms every book runs on. When it and an impulse conflict, the constitution wins. When it and reality conflict, amend it here, deliberately, never by drift.") +
     '<form class="card" style="padding:24px" data-a="saveconst">'+
       '<div class="grid g3">'+
         '<div><label class="label">Giving, off the top</label><div class="row" style="gap:8px"><input class="field tnum" name="givingPct" type="number" step="0.5" min="0" max="100" value="'+c.givingPct+'"><span class="small sub">%</span></div></div>'+
@@ -715,11 +1161,11 @@ function constitutionView(){
       '</div></div>'+
       '<div style="margin-top:18px"><label class="label">Articles &amp; notes</label><textarea class="field" name="notes" rows="4" placeholder="Fill the tank every week, low or not…">'+esc(c.notes)+'</textarea></div>'+
       '<button class="btn btn-primary" style="margin-top:18px">Save the constitution</button></form>'+
-    '<div class="grid g2" style="margin-top:12px">'+
-      '<div class="card" style="padding:18px"><p class="label">Weekly number</p><p class="tnum" style="font-size:20px;font-weight:600">'+(weeklyTotal?money(weeklyTotal):"—")+'</p>'+
-        '<p class="tiny faint" style="margin-top:4px">Not declared — the sum of your weekly rhythms. Change it by changing them.</p></div>'+
-      '<div class="card" style="padding:18px"><p class="label">Buffer targets</p>'+
-        db.books.map(b=>'<div class="row" style="justify-content:space-between"><span class="small sub">'+esc(b.name)+'</span><span class="tnum small">'+(b.bufferTarget?money(b.bufferTarget):"—")+'</span></div>').join("")+'</div>'+
+    '<div class="gstat" style="margin-top:12px">'+
+      '<div class="stat"><p class="label">Weekly number, all books</p><p class="n tnum">'+(weeklyTotal?money(weeklyTotal):"—")+'</p>'+
+        '<p class="why">Not declared — the sum of every weekly rhythm. Rhythms are set on the book they charge.</p></div>'+
+      '<div class="stat"><p class="label">Buffer targets</p>'+
+        db.books.map(b=>'<div class="kv"><span>'+esc(b.name)+'</span><span class="tnum">'+(b.bufferTarget?money(b.bufferTarget):"—")+'</span></div>').join("")+'</div>'+
     '</div>'+
     '<div class="sec"><h2 class="sec-h">Amendment log</h2>'+
       '<p class="sec-r">Mid-quarter changes are allowed — in daylight. Thirty seconds of written honesty, ratified at the next meeting.</p>'+
@@ -791,34 +1237,33 @@ function meetingView(){
   const aprojects = db.projects.filter(p=>p.status==="active");
   const meetings = db.meetings.slice().sort((a,b)=> a.date<b.date?1:-1);
 
-  const brief = '<div class="grid g3">'+
-    '<div class="card" style="padding:18px"><p class="label">Rhythms holding</p>'+
-      '<p class="tnum" style="font-size:24px;font-weight:600"><span style="color:'+(flagged.length?"var(--ink)":"var(--up-ink)")+'">'+holding.length+'</span><span class="sub"> / '+rhythmsFor().length+'</span></p>'+
-      '<p class="tiny faint" style="margin-top:4px">three periods running or better</p></div>'+
-    '<div class="card" style="padding:18px"><p class="label">Income by source</p>'+
-      (inc.size?[...inc.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>'<div class="row" style="justify-content:space-between"><span class="small sub trunc">'+esc(e[0])+'</span><span class="tnum small">'+money(e[1])+'</span></div>').join(""):'<p class="small faint">None recorded this quarter.</p>')+'</div>'+
-    '<div class="card" style="padding:18px"><p class="label">Runway</p>'+
+  const brief = '<div class="gstat">'+
+    '<div class="stat"><p class="label">Rhythms holding</p>'+
+      '<p class="n tnum"><span style="color:'+(flagged.length?"var(--ink)":"var(--up-ink)")+'">'+holding.length+'</span><span class="sub"> / '+rhythmsFor().length+'</span></p>'+
+      '<p class="why">three periods running or better</p></div>'+
+    '<div class="stat"><p class="label">Income by source</p>'+
+      (inc.size?[...inc.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>'<div class="kv"><span>'+esc(e[0])+'</span><span class="tnum">'+money(e[1])+'</span></div>').join(""):'<p class="why">None recorded this quarter.</p>')+'</div>'+
+    '<div class="stat"><p class="label">Runway</p>'+
       (ventures.length?ventures.map(b=>{
         const r=runway(b), col=r===Infinity?"var(--faint)":r<2?"var(--down)":r<3?"var(--warn)":"var(--up-ink)";
-        return '<div class="row" style="justify-content:space-between"><span class="small sub trunc">'+esc(b.name)+'</span><span class="tnum small" style="color:'+col+'">'+(r===Infinity?"—":r.toFixed(1)+" mo")+'</span></div>';
-      }).join(""):'<p class="small faint">No ventures on the books.</p>')+'</div></div>';
+        return '<div class="kv"><span>'+esc(b.name)+'</span><span class="tnum" style="color:'+col+'">'+(r===Infinity?"—":r.toFixed(1)+" mo")+'</span></div>';
+      }).join(""):'<p class="why">No ventures on the books.</p>')+'</div></div>';
 
   const reviewSec = '<div class="sec"><h2 class="sec-h">Rhythms that earned a review</h2>'+
     '<p class="sec-r">A quarter of consistent overspend is evidence, not weakness. Amend the number or change the life — but decide it here.</p>'+
     '<div class="card">'+ (flagged.length ? flagged.map(x=>{
       const cur = rhythmSpent(x.r, periodStart(x.r.cadence,t));
       return '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:600">'+esc(x.r.name)+'</p>'+
-        '<p class="tiny faint">'+bookName(x.r.bookId)+' · set at '+money(x.r.amount)+'/'+CAD_UNIT[x.r.cadence]+' · over in '+x.rev.missed+' of the last '+x.rev.of+'</p></div>'+
-        historyStrip(x.r,6)+
-        '<form class="row" data-a="updrhythm" style="gap:8px"><input type="hidden" name="id" value="'+x.r.id+'">'+
-        '<input class="field tnum" name="amount" value="'+dec(x.r.amount)+'" style="width:100px;padding:6px 10px" inputmode="decimal">'+
+        '<p class="tiny faint">'+bookName(x.r.bookId)+' · set at '+money(x.r.amount)+'/'+CAD_UNIT[x.r.cadence]+' · over in '+x.rev.missed+' of the last '+x.rev.of+'</p>'+
+        '<div style="margin-top:7px">'+historyStrip(x.r,6)+'</div></div>'+
+        '<form class="row" data-a="updrhythm" style="gap:8px;flex:0 0 auto"><input type="hidden" name="id" value="'+x.r.id+'">'+
+        '<input class="field tnum" name="amount" value="'+dec(x.r.amount)+'" style="width:100px;padding:6px 10px" inputmode="decimal" aria-label="New amount for '+esc(x.r.name)+'">'+
         '<button class="btn btn-ghost btn-sm">Amend</button></form></div>';
     }).join("") : '<p class="empty">Every rhythm is holding. Nothing to reconsider this quarter.</p>')+'</div></div>';
 
   const charts = weeks.length ? active.map(b=>
     '<div class="card" style="padding:18px;margin-top:12px">'+
-      '<div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:6px">'+
-        '<h3 style="font-size:15px;font-weight:600">'+esc(b.name)+'</h3>'+
+      '<div class="charthead"><h3>'+esc(b.name)+'</h3>'+
         '<p class="tiny faint">Operating flat · buffer holds · wealth only steps upward</p></div>'+
       chartSvg(b.id,weeks,labels)+'</div>').join("") : "";
 
@@ -831,8 +1276,10 @@ function meetingView(){
 
   const amRows = pending.length ? pending.map(a=>
     '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:500">'+esc(a.title)+'</p><p class="tiny sub">'+a.date+' — '+esc(a.reason)+'</p></div>'+
-    '<button class="btn btn-up btn-sm" data-a="decide" data-id="'+a.id+'" data-v="ratified">Ratify</button>'+
-    '<button class="btn btn-down btn-sm" data-a="decide" data-id="'+a.id+'" data-v="rejected">Reject</button></div>').join("")
+    // the two decisions are a pair — they wrap together or not at all
+    '<div class="row" style="gap:8px;flex:0 0 auto">'+
+      '<button class="btn btn-up btn-sm" data-a="decide" data-id="'+a.id+'" data-v="ratified">Ratify</button>'+
+      '<button class="btn btn-down btn-sm" data-a="decide" data-id="'+a.id+'" data-v="rejected">Reject</button></div></div>').join("")
     : '<p class="empty">Nothing pending. Drift, if any, happened in daylight.</p>';
 
   const venture = det("newventure","Found a new venture",
@@ -870,24 +1317,39 @@ function meetingView(){
 
 /* ============ render ============ */
 function view(){
-  if(route==="week") return weekView();
-  if(route==="rhythms") return rhythmsView();
+  if(route==="home") return homeView();
   if(route==="constitution") return constitutionView();
   if(route==="meeting") return meetingView();
+  if(route.startsWith("week:")) return weekBookView(route.slice(5));
   if(route.startsWith("book:")) return bookView(route.slice(5));
-  return weekView();
+  return homeView();
 }
 function footer(){
-  return '<div class="foot"><span>Static preview · saved in this browser only.</span>'+
+  // shown only on narrow screens, where these two leave the top bar
+  const slow = [{r:"constitution",l:"Constitution"},{r:"meeting",l:"Board Meeting"}];
+  const nav = '<nav class="footnav" aria-label="More">'+ slow.map(x=>
+    '<button class="footlink" data-go="'+x.r+'"'+(route===x.r?' aria-current="page"':"")+'>'+
+      esc(x.l)+'<span class="go" aria-hidden="true">›</span></button>').join("")+'</nav>';
+
+  return nav + '<div class="foot"><span>Static preview · saved in this browser only.</span>'+
     '<button class="btn btn-ghost btn-sm" data-a="reseed">Reload demo data</button>'+
     '<button class="btn btn-ghost btn-sm" data-a="empty">Start empty</button></div>';
 }
 function render(toTop){
   const app = document.getElementById("app"), y = window.scrollY;
   if(!authed){ app.innerHTML = loginView(); const f=app.querySelector("#pw"); if(f) f.focus(); return; }
-  app.innerHTML = navView()+'<main class="wrap">'+(banner?'<div class="banner"><b>The rule held.</b><span>'+esc(banner)+'</span></div>':"")+view()+footer()+'</main>';
+  app.innerHTML = navView()+'<main class="wrap">'+(banner?'<div class="banner"><b>The rule held.</b><span>'+esc(banner)+'</span></div>':"")+view()+footer()+'</main>'+sheetView();
   wireCharts();
   window.scrollTo(0, toTop?0:y);
+  const form = app.querySelector(".sheet form");
+  if(form && sheet && sheet.draft){
+    for(const k in sheet.draft){
+      const el = form.elements[k];
+      if(el && !el.disabled && "value" in el) el.value = sheet.draft[k];
+    }
+  }
+  const amt = app.querySelector(".sheet .amtbig input");
+  if(amt){ amt.focus(); amt.select(); }
 }
 function wireCharts(){
   document.querySelectorAll(".chartbox").forEach(box=>{
@@ -949,6 +1411,7 @@ function addTxn(f){
     bucket:f.bucket||undefined, projectId:f.projectId||undefined, rhythmId:rid
   });
   save(); banner=""; render();
+  return true;
 }
 
 const forms = {
@@ -957,10 +1420,36 @@ const forms = {
     else fail("That password isn’t right.");
   },
   quicklog(f){
-    const book = db.books.find(b=>b.kind==="personal")||db.books[0];
-    addTxn({bookId:book.id, kind:"expense", wallet:"operating", amount:f.amount, note:f.note, rhythmId:f.rhythmId});
+    const book = db.books.find(b=>b.id===f.bookId) || db.books[0];
+    addTxn({bookId:book.id, kind:"expense", wallet:"operating", amount:f.amount,
+      note:f.note || rhythmName(f.rhythmId) || undefined, rhythmId:f.rhythmId});
+  },
+  /* Many rows, one commit. Reads the raw form because the row fields repeat. */
+  batchlog(f, form){
+    const fd = new FormData(form);
+    const amounts = fd.getAll("amount"), rids = fd.getAll("rhythmId");
+    const notes = fd.getAll("note"), dates = fd.getAll("date");
+    const rows = [];
+    for(let i=0;i<amounts.length;i++){
+      const amount = parseMoney(amounts[i]);
+      if(!amount || amount<=0) continue;
+      const rid = rids[i] && rids[i]!=="__none" ? rids[i] : undefined;
+      rows.push({id:uid(), bookId:f.bookId, date:dates[i]||iso(today()), kind:"expense",
+        wallet:"operating", amount, note:(notes[i]||"").trim() || rhythmName(rid) || undefined, rhythmId:rid});
+    }
+    if(!rows.length) return; // every row blank — nothing was asked for
+    rows.forEach(r=>db.transactions.push(r));
+    openIds.delete("bulk-"+f.bookId);
+    save(); banner=""; render();
   },
   entry(f){ addTxn(f); },
+  /* If a rule refuses the entry the sheet stays open with everything still in
+     it — the draft is replayed into the re-rendered form. */
+  sheetentry(f){
+    if(sheet){ sheet.draft = f; if(f.bookId) sheet.bookId = f.bookId; }
+    if(addTxn(f) !== true) return;
+    sheet = null; render();
+  },
   addrhythm(f){
     const amount = parseMoney(f.amount);
     if(!f.name || amount<=0) return;
@@ -1032,6 +1521,8 @@ const forms = {
 };
 
 const clicks = {
+  opensheet(el){ sheet = {kind: el.dataset.v, bookId: el.dataset.book || null}; banner=""; render(); },
+  closesheet(){ sheet = null; render(); },
   logout(){ authed=false; banner=""; try{sessionStorage.removeItem(SESS);}catch(e){} render(); },
   entrykind(el){ entryKind = el.dataset.v; render(); },
   deltxn(el){ db.transactions = db.transactions.filter(t=>t.id!==el.dataset.id); save(); render(); },
@@ -1049,8 +1540,19 @@ const clicks = {
   },
   endproj(el){ const p=db.projects.find(x=>x.id===el.dataset.id); if(p){p.status="ended"; save(); render();} },
   decide(el){ const a=db.amendments.find(x=>x.id===el.dataset.id); if(a){ a.status=el.dataset.v; a.decidedAt=iso(today()); save(); render(); } },
-  reseed(){ db=demoDb(); save(); go("week"); },
-  empty(){ db=emptyDb(); save(); go("week"); }
+  /* Appends in place — a re-render here would wipe what's already typed. */
+  addrow(el){
+    const rows = el.closest("form").querySelector("[data-rows]");
+    if(!rows) return;
+    const last = rows.querySelector("[data-row]:last-child");
+    const next = last.cloneNode(true);
+    next.querySelectorAll("input").forEach(i=>{ if(i.type!=="date") i.value=""; });
+    rows.appendChild(next);
+    const amt = next.querySelector("input");
+    if(amt) amt.focus();
+  },
+  reseed(){ db=demoDb(); save(); go("home"); },
+  empty(){ db=emptyDb(); save(); go("home"); }
 };
 
 document.addEventListener("submit", e=>{
@@ -1060,7 +1562,7 @@ document.addEventListener("submit", e=>{
   const f = {};
   new FormData(form).forEach((v,k)=>{ f[k] = typeof v==="string" ? v.trim() : v; });
   const a = form.dataset.a;
-  if(a && forms[a]) return forms[a](f);
+  if(a && forms[a]) return forms[a](f, form);
   if(f.kind) return addTxn(f);
 });
 document.addEventListener("click", e=>{
@@ -1069,6 +1571,32 @@ document.addEventListener("click", e=>{
   const el = e.target.closest("[data-a]");
   if(!el || el.tagName==="FORM") return;
   if(clicks[el.dataset.a]){ e.preventDefault(); clicks[el.dataset.a](el); }
+});
+/* Changing the book inside the sheet re-points the rhythm/project lists. Done in
+   place rather than by re-render, so the amount already typed survives. */
+document.addEventListener("change", e=>{
+  const sel = e.target;
+  if(sel.name !== "bookId" || !sel.closest("[data-sheet]")) return;
+  const form = sel.closest("form"), bid = sel.value;
+  if(sheet) sheet.bookId = bid;
+  const rs = form.querySelector('select[name="rhythmId"]');
+  if(rs) rs.innerHTML = '<option value="__none">One-off — outside the rhythms</option>'+rhythmOptions(bid);
+  const ps = form.querySelector('select[name="projectId"]');
+  if(ps) ps.innerHTML = '<option value="">— none —</option>'+projectOptions(bid);
+  const bw = form.querySelector("[data-bucket]"), bk = db.books.find(b=>b.id===bid);
+  if(bw){
+    const venture = !!bk && bk.kind==="venture";
+    bw.style.display = venture ? "" : "none";
+    bw.querySelector("select").disabled = !venture;
+  }
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape" && sheet){ sheet = null; return render(); }
+  // the whole card is a target, so it answers to the keyboard like one
+  if(e.key==="Enter" || e.key===" "){
+    const card = e.target.closest && e.target.closest(".bcard[data-go]");
+    if(card){ e.preventDefault(); go(card.dataset.go); }
+  }
 });
 document.addEventListener("toggle", e=>{
   const d = e.target;
