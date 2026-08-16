@@ -1,0 +1,930 @@
+<title>Moneymeter</title>
+<style>
+@font-face{font-family:"Instrument Sans";src:url(data:font/woff2;base64,__FONT_N__) format("woff2");font-weight:400 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(data:font/woff2;base64,__FONT_I__) format("woff2");font-weight:400 700;font-style:italic;font-display:swap}
+
+:root{
+  --paper:#FAFAF7; --card:#FFFFFF; --line:#E9E8E3; --line-soft:#F0EFEB;
+  --ink:#1D1D1F; --sub:#6E6E73; --faint:#AEAEB2;
+  --up:#34C759; --down:#FF3B30; --warn:#FF9500; --note:#FFCC00;
+  --act:#007AFF; --teal:#30B0C7; --indigo:#5856D6;
+  --shadow:0 1px 2px rgba(29,29,31,.04), 0 4px 16px rgba(29,29,31,.045);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.tnum{font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em}
+p{margin:0}
+button{font:inherit;color:inherit}
+a{color:var(--act);text-decoration:none}
+:focus-visible{outline:2px solid var(--act);outline-offset:2px;border-radius:8px}
+
+/* ---------- shell ---------- */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(250,250,247,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:900px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:none}
+.topbar-in::-webkit-scrollbar{display:none}
+.brand{font-weight:600;font-size:15px;letter-spacing:-.02em;margin-right:10px;flex-shrink:0}
+.navlink{white-space:nowrap;border:0;background:none;padding:6px 13px;border-radius:999px;font-size:14px;color:var(--sub);cursor:pointer;transition:background .15s,color .15s}
+.navlink:hover{background:var(--line-soft);color:var(--ink)}
+.navlink[aria-current="page"]{background:var(--ink);color:#fff}
+.signout{margin-left:auto;flex-shrink:0;border:0;background:none;padding:6px 12px;border-radius:999px;font-size:14px;color:var(--faint);cursor:pointer}
+.signout:hover{color:var(--ink)}
+.wrap{max-width:900px;margin:0 auto;padding:32px 20px 96px}
+
+/* ---------- primitives ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;padding:9px 18px;font-size:14px;font-weight:500;border:1px solid transparent;cursor:pointer;transition:background .15s,border-color .15s,color .15s;white-space:nowrap}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:#000}
+.btn-ghost{background:var(--card);border-color:var(--line);color:var(--ink)}
+.btn-ghost:hover{background:var(--paper)}
+.btn-sm{padding:5px 13px;font-size:13px}
+.btn-up{background:rgba(52,199,89,.12);color:#1E8E3E}
+.btn-up:hover{background:rgba(52,199,89,.2)}
+.btn-down{background:rgba(255,59,48,.1);color:var(--down)}
+.btn-down:hover{background:rgba(255,59,48,.18)}
+.linkbtn{border:0;background:none;padding:0;font-size:13px;color:var(--faint);cursor:pointer}
+.linkbtn:hover{color:var(--down)}
+.linkbtn.neutral:hover{color:var(--ink)}
+.field{width:100%;border:1px solid var(--line);background:var(--card);border-radius:11px;padding:9px 12px;font-size:14px;font-family:inherit;color:var(--ink)}
+.field::placeholder{color:var(--faint)}
+.field:focus{outline:none;border-color:rgba(29,29,31,.3)}
+select.field{appearance:none;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%236E6E73' d='M3 5l3 3 3-3z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+textarea.field{resize:vertical;line-height:1.55}
+.label{display:block;margin-bottom:5px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--sub)}
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:500}
+.p-up{background:rgba(52,199,89,.14);color:#1E8E3E}
+.p-warn{background:rgba(255,149,0,.14);color:#B25E00}
+.p-down{background:rgba(255,59,48,.12);color:var(--down)}
+.p-teal{background:rgba(48,176,199,.14);color:#1A7C8C}
+.p-mute{background:var(--line-soft);color:var(--sub)}
+.sub{color:var(--sub)}
+.faint{color:var(--faint)}
+.tiny{font-size:12px}
+.small{font-size:13px}
+.sec{margin-top:40px}
+.sec-h{font-size:18px;font-weight:600;margin-bottom:12px}
+.grid{display:grid;gap:12px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.row{display:flex;align-items:center;gap:12px}
+.rowsplit{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line)}
+.rowsplit:first-child{border-top:0}
+.grow{flex:1;min-width:0}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:999px;transition:width .4s ease}
+details>summary{cursor:pointer;list-style:none;padding:14px 20px;font-size:14px;font-weight:500;user-select:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"›";display:inline-block;margin-right:8px;color:var(--faint);transition:transform .2s;transform-origin:center}
+details[open]>summary::before{transform:rotate(90deg)}
+summary.act{color:var(--act)}
+.dbody{padding:0 20px 18px}
+.banner{display:flex;gap:8px;border-radius:14px;padding:12px 16px;font-size:14px;margin-bottom:20px;border:1px solid rgba(255,149,0,.3);background:rgba(255,149,0,.09)}
+.banner b{color:#B25E00}
+
+/* ---------- login ---------- */
+.login{min-height:88vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-in{width:100%;max-width:340px}
+.login h1{font-size:26px;text-align:center}
+.login .tag{text-align:center;color:var(--sub);font-size:14px;margin-top:4px}
+.login form{padding:24px;margin-top:28px}
+.login .btn{width:100%;margin-top:16px}
+
+/* ---------- this week ---------- */
+.week{max-width:440px;margin:0 auto;text-align:center}
+.eyebrow{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)}
+.bignum{font-size:64px;font-weight:600;letter-spacing:-.045em;line-height:1.05;margin-top:14px}
+.quick{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 18px;margin-top:36px;text-align:left}
+.quick input{border:0;background:none;font:inherit;font-size:14px;padding:0;min-width:0}
+.quick input:focus{outline:none}
+.quick input::placeholder{color:var(--faint)}
+.quick .amt{width:86px}
+.spendlist{margin-top:28px;text-align:left;display:flex;flex-direction:column}
+.spend{display:flex;align-items:baseline;gap:12px;padding:9px 12px;border-radius:11px;font-size:14px}
+.spend:hover{background:var(--card)}
+.spend .del{opacity:0;transition:opacity .15s}
+.spend:hover .del{opacity:1}
+
+/* ---------- ledger ---------- */
+.led{display:flex;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid var(--line);font-size:14px}
+.led:first-child{border-top:0}
+.led .d{width:52px;flex-shrink:0;font-size:12px;color:var(--faint)}
+
+/* ---------- chart ---------- */
+.chartbox{position:relative}
+.chartbox svg{width:100%;display:block;touch-action:none}
+.tip{position:absolute;top:6px;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:12px;box-shadow:var(--shadow);white-space:nowrap;display:none}
+.tip h4{margin:0 0 5px;font-size:12px;font-weight:600}
+.tip .r{display:flex;align-items:center;gap:8px;margin-top:3px}
+.tip .dot{width:7px;height:7px;border-radius:999px;flex-shrink:0}
+.tip .v{margin-left:auto;padding-left:16px;font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.tbl th{text-align:left;color:var(--sub);font-weight:500;padding:4px 12px 4px 0}
+.tbl td{padding:4px 12px 4px 0;border-top:1px solid var(--line)}
+.scroll{overflow-x:auto}
+
+.foot{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:var(--faint)}
+
+@media (max-width:720px){
+  .wrap{padding:24px 16px 80px}
+  .g3,.g2{grid-template-columns:1fr}
+  .bignum{font-size:52px}
+  .topbar-in{padding:10px 16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app"></div>
+
+<script>
+"use strict";
+const PASSWORD = "moneymeter";
+const KEY = "moneymeter.db.v1";
+const SESS = "moneymeter.authed";
+
+/* ============ money & dates ============ */
+const c2 = n => String(n).padStart(2, "0");
+function money(cents){
+  const sign = cents < 0 ? "−" : "";
+  const abs = Math.abs(cents), d = Math.floor(abs/100), r = abs%100;
+  return sign + "$" + d.toLocaleString("en-US") + (r ? "." + c2(r) : "");
+}
+function parseMoney(v){
+  if(!v) return 0;
+  const n = parseFloat(String(v).replace(/[$,\s]/g,""));
+  return isFinite(n) ? Math.round(n*100) : 0;
+}
+function iso(d){ return d.getFullYear() + "-" + c2(d.getMonth()+1) + "-" + c2(d.getDate()); }
+function fromIso(s){ const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); }
+function pretty(s){ return fromIso(s).toLocaleDateString("en-US",{month:"short",day:"numeric"}); }
+function weekStart(d){ const x = new Date(d); const k = (x.getDay()+6)%7; x.setDate(x.getDate()-k); x.setHours(0,0,0,0); return x; }
+function addDays(d,n){ return new Date(d.getTime() + n*86400000); }
+function today(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+const uid = () => Math.random().toString(36).slice(2,10);
+
+/* ============ state ============ */
+let db = null, route = "week", banner = "", authed = false;
+const openIds = new Set();
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
+function load(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return null;
+}
+
+/* ============ demo data (anchored to today) ============ */
+function demoDb(){
+  const t = today();
+  const mon = weekStart(t);
+  const weeks = [];
+  for(let i=6;i>=0;i--) weeks.push(addDays(mon, -i*7));
+  const open = iso(addDays(weeks[0], -6));
+  const tx = [];
+  const push = o => tx.push(Object.assign({id:uid()}, o));
+
+  // opening balances
+  push({bookId:"personal",date:open,kind:"income",wallet:"operating",amount:90000,source:"Opening balance"});
+  push({bookId:"personal",date:open,kind:"income",wallet:"buffer",amount:620000,source:"Opening balance"});
+  push({bookId:"personal",date:open,kind:"income",wallet:"wealth",amount:1250000,source:"Opening balance"});
+  push({bookId:"hubway",date:open,kind:"income",wallet:"operating",amount:140000,source:"Opening balance"});
+  push({bookId:"hubway",date:open,kind:"income",wallet:"buffer",amount:510000,source:"Opening balance"});
+  push({bookId:"hubway",date:open,kind:"income",wallet:"wealth",amount:300000,source:"Opening balance"});
+
+  // venture income, weekly and volatile
+  const retainers = [210000,185000,240000,95000,260000,175000,230000];
+  weeks.forEach((w,i)=> push({bookId:"hubway",date:iso(w),kind:"income",wallet:"operating",amount:retainers[i],source:"Client retainers"}));
+
+  // monthly rhythms on the 1st of each month covered
+  const firsts = [];
+  let cur = new Date(weeks[0].getFullYear(), weeks[0].getMonth(), 1);
+  while(cur <= t){ if(cur >= weeks[0]) firsts.push(new Date(cur)); cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1); }
+  firsts.forEach(f=>{
+    const d = iso(f);
+    push({bookId:"hubway",date:d,kind:"expense",wallet:"operating",amount:290000,note:"Payroll + tools",bucket:"burn"});
+    push({bookId:"hubway",date:d,kind:"expense",wallet:"operating",amount:400000,note:"Owner's draw",bucket:"burn"});
+    push({bookId:"hubway",date:d,kind:"transfer",wallet:"operating",toWallet:"buffer",amount:120000,note:"Refill buffer"});
+    push({bookId:"personal",date:d,kind:"income",wallet:"operating",amount:400000,source:"The draw"});
+    push({bookId:"personal",date:d,kind:"expense",wallet:"operating",amount:60000,note:"Giving — tithe + offering",obligationId:"ob-give"});
+    push({bookId:"personal",date:d,kind:"expense",wallet:"operating",amount:165000,note:"Rent",obligationId:"ob-rent"});
+    push({bookId:"personal",date:d,kind:"transfer",wallet:"operating",toWallet:"buffer",amount:50000,note:"Buffer fill"});
+    push({bookId:"personal",date:d,kind:"transfer",wallet:"operating",toWallet:"wealth",amount:40000,note:"Wealth step"});
+  });
+  const mid = iso(addDays(weeks[3], 2));
+  push({bookId:"hubway",date:mid,kind:"transfer",wallet:"operating",toWallet:"wealth",amount:80000,note:"Surplus → wealth (50%)"});
+
+  // weekly discretionary living
+  const items = [["Groceries",6200],["Gas — fill the tank",4800],["Coffee",700],["Dinner out",5400],["Small stuff",2300]];
+  weeks.forEach((w,wi)=> items.forEach((it,ii)=>{
+    const d = addDays(w, ii);
+    if(d <= t) push({bookId:"personal",date:iso(d),kind:"expense",wallet:"operating",amount:it[1] + ((wi*7+ii)%5)*400,note:it[0]});
+  }));
+
+  // project activity
+  push({bookId:"personal",date:iso(weeks[2]),kind:"transfer",wallet:"operating",toWallet:"operating",amount:30000,note:"Fund Furnishing",projectId:"proj-furnish"});
+  push({bookId:"personal",date:iso(weeks[5]),kind:"transfer",wallet:"operating",toWallet:"operating",amount:30000,note:"Fund Furnishing",projectId:"proj-furnish"});
+  push({bookId:"personal",date:iso(addDays(weeks[6],1)),kind:"expense",wallet:"operating",amount:24000,note:"Bookshelf",projectId:"proj-furnish"});
+  push({bookId:"hubway",date:iso(weeks[2]),kind:"expense",wallet:"operating",amount:45000,note:"Ads",bucket:"fuel",projectId:"proj-mkt"});
+  push({bookId:"hubway",date:iso(weeks[5]),kind:"expense",wallet:"operating",amount:38000,note:"Ads",bucket:"fuel",projectId:"proj-mkt"});
+
+  const q = Math.floor(t.getMonth()/3)+1, y = t.getFullYear();
+  const pq = q === 1 ? "Q4 " + (y-1) : "Q" + (q-1) + " " + y;
+  const nq = q === 4 ? "Q1 " + (y+1) : "Q" + (q+1) + " " + y;
+
+  return {
+    books:[
+      {id:"personal",name:"Personal",kind:"personal",bufferTarget:1000000,weeklyNumber:25000,createdAt:open},
+      {id:"hubway",name:"Hubway Studio",kind:"venture",stage:"self-funding",bufferTarget:900000,monthlyBurn:300000,seedCeiling:1500000,seedDeadline:"Board meeting " + nq,createdAt:open}
+    ],
+    transactions: tx,
+    obligations:[
+      {id:"ob-rent",bookId:"personal",name:"Rent (annual, accrued monthly)",amount:165000,cadence:"monthly",dueDay:1},
+      {id:"ob-give",bookId:"personal",name:"Giving — tithe + offering",amount:60000,cadence:"monthly",dueDay:1},
+      {id:"ob-sub",bookId:"personal",name:"Subscriptions",amount:8900,cadence:"monthly",dueDay:15},
+      {id:"ob-pay",bookId:"hubway",name:"Payroll",amount:250000,cadence:"monthly",dueDay:1}
+    ],
+    projects:[
+      {id:"proj-furnish",bookId:"personal",name:"Furnishing",rule:{type:"save",target:120000},start:iso(weeks[1]),endNote:"When funded and spent",status:"active"},
+      {id:"proj-mkt",bookId:"hubway",name:"Marketing push",rule:{type:"ceiling",cap:150000,months:3},start:iso(weeks[1]),endNote:"Board meeting " + nq,status:"active"}
+    ],
+    amendments:[
+      {id:"am1",date:iso(addDays(t,-19)),title:"Weekly number raised $220 → $250",reason:"Observed reality: groceries up, three weeks running.",status:"pending"}
+    ],
+    meetings:[
+      {id:"mt1",label:pq,date:iso(addDays(weeks[0],-1)),resolutions:["Weekly number set at $220","Personal buffer target: $10,000","Hubway surplus split 50/30/20 ratified"],notes:"Founding board meeting."}
+    ],
+    constitution:{givingPct:15,drawAmount:400000,drawCadence:"monthly",surplusSplit:{wealth:50,growth:30,onward:20},notes:"Fill the tank every Monday, low or not. Annual rent accrues monthly. Every hire and tool is a ceiling with a review date, never an open tap."}
+  };
+}
+
+function emptyDb(){
+  return {
+    books:[{id:"personal",name:"Personal",kind:"personal",bufferTarget:0,weeklyNumber:0,createdAt:iso(today())}],
+    transactions:[],obligations:[],projects:[],amendments:[],meetings:[],
+    constitution:{givingPct:15,drawAmount:0,drawCadence:"monthly",surplusSplit:{wealth:50,growth:30,onward:20},notes:""}
+  };
+}
+
+/* ============ money math ============ */
+function balances(bookId, asOf){
+  const b = {operating:0,buffer:0,wealth:0};
+  for(const t of db.transactions){
+    if(t.bookId !== bookId) continue;
+    if(asOf && t.date > asOf) continue;
+    if(t.kind === "income") b[t.wallet] += t.amount;
+    else if(t.kind === "expense") b[t.wallet] -= t.amount;
+    else if(t.kind === "transfer" && t.toWallet){ b[t.wallet] -= t.amount; b[t.toWallet] += t.amount; }
+  }
+  return b;
+}
+function weeklySpent(bookId, date){
+  const s = iso(weekStart(date)), e = iso(addDays(weekStart(date),6));
+  let sum = 0;
+  for(const t of db.transactions){
+    if(t.bookId !== bookId || t.kind !== "expense" || t.wallet !== "operating") continue;
+    if(t.projectId || t.obligationId) continue;
+    if(t.date >= s && t.date <= e) sum += t.amount;
+  }
+  return sum;
+}
+function projectBalance(p){
+  let funded = 0, spent = 0;
+  for(const t of db.transactions){
+    if(t.projectId !== p.id) continue;
+    if(t.kind === "expense") spent += t.amount; else funded += t.amount;
+  }
+  return {funded, spent};
+}
+function bookIncome(bookId, s, e){
+  let sum = 0;
+  for(const t of db.transactions) if(t.bookId===bookId && t.kind==="income" && t.date>=s && t.date<=e) sum += t.amount;
+  return sum;
+}
+function runway(book){
+  if(!book.monthlyBurn || book.monthlyBurn <= 0) return Infinity;
+  return balances(book.id).buffer / book.monthlyBurn;
+}
+function quarterInfo(){
+  const t = today(), y = t.getFullYear(), q = Math.floor(t.getMonth()/3)+1;
+  return {y, q, label:"Q"+q+" "+y, start:iso(new Date(y,(q-1)*3,1)), end:iso(new Date(y,q*3,0))};
+}
+
+/* ============ helpers ============ */
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const dec = c => c ? (c/100).toString() : "";
+function det(id, summary, body, action, containerCls, summaryCls){
+  return '<details class="' + (containerCls||"") + '" data-id="' + id + '"' + (openIds.has(id) ? " open" : "") + '>' +
+    '<summary' + (summaryCls ? ' class="' + summaryCls + '"' : "") + '>' + summary + '</summary>' +
+    '<form class="dbody" data-a="' + action + '">' + body + '</form></details>';
+}
+function go(r){ route = r; banner = ""; render(true); }
+function fail(msg){ banner = msg; render(); }
+
+/* ============ views ============ */
+function loginView(){
+  return '<div class="login"><div class="login-in">' +
+    '<h1>Moneymeter</h1><p class="tag">A constitution for money.</p>' +
+    '<form class="card" data-a="login">' +
+      '<label class="label" for="pw">Password</label>' +
+      '<input class="field" id="pw" name="password" type="password" autofocus placeholder="Enter password" autocomplete="current-password">' +
+      (banner ? '<p class="small" style="color:var(--down);margin-top:8px">' + esc(banner) + '</p>' : "") +
+      '<button class="btn btn-primary">Enter</button>' +
+    '</form>' +
+    '<p class="tiny faint" style="text-align:center;margin-top:22px">Private preview — the password is <b>moneymeter</b>.</p>' +
+  '</div></div>';
+}
+
+function navView(){
+  const links = [{r:"week",l:"This Week"}]
+    .concat(db.books.map(b=>({r:"book:"+b.id, l:b.name})))
+    .concat([{r:"constitution",l:"Constitution"},{r:"meeting",l:"Board Meeting"}]);
+  return '<header class="topbar"><div class="topbar-in">' +
+    '<span class="brand">Moneymeter</span>' +
+    links.map(x=>'<button class="navlink" data-go="'+x.r+'"' + (route===x.r?' aria-current="page"':"") + '>'+esc(x.l)+'</button>').join("") +
+    '<button class="signout" data-a="logout">Sign out</button>' +
+  '</div></header>';
+}
+
+function weekView(){
+  const book = db.books.find(b=>b.kind==="personal") || db.books[0];
+  const t = today(), ws = weekStart(t);
+  const spent = weeklySpent(book.id, t), num = book.weeklyNumber || 0;
+  const left = num - spent, over = left < 0;
+  const pct = num > 0 ? Math.min(100, Math.round(spent/num*100)) : 0;
+  const list = db.transactions
+    .filter(x=>x.bookId===book.id && x.kind==="expense" && x.wallet==="operating" && !x.projectId && !x.obligationId && x.date>=iso(ws))
+    .sort((a,b)=> a.date < b.date ? 1 : -1);
+
+  let head;
+  if(num > 0){
+    const col = over ? "var(--down)" : (pct >= 85 ? "var(--warn)" : "var(--up)");
+    head = '<p class="bignum tnum" style="' + (over ? "color:var(--down)" : "") + '">' + money(Math.abs(left)) + '</p>' +
+      '<p class="small sub" style="margin-top:6px">' + (over
+        ? '<span style="color:var(--down);font-weight:500">over the weekly number</span>'
+        : 'left of <b class="tnum" style="color:var(--ink)">' + money(num) + '</b>') + '</p>' +
+      '<div class="bar" style="width:220px;margin:20px auto 0"><i style="width:' + (over?100:pct) + '%;background:' + col + '"></i></div>';
+  } else {
+    head = '<div class="card" style="margin-top:24px;padding:22px;font-size:14px;color:var(--sub);border-style:dashed">' +
+      'No weekly number yet. This is the observation phase: log reality below without judgment for a few weeks, then set the number in the personal book.</div>';
+  }
+
+  return '<div class="week">' +
+    '<p class="eyebrow">The week of ' + pretty(iso(ws)) + ' – ' + pretty(iso(addDays(ws,6))) + '</p>' + head +
+    '<form class="card quick" data-a="quickspend">' +
+      '<span class="faint small">$</span>' +
+      '<input class="amt tnum" name="amount" inputmode="decimal" placeholder="0.00" required>' +
+      '<input class="grow" name="note" placeholder="What was it?">' +
+      '<button class="btn btn-primary">Log it</button>' +
+    '</form>' +
+    (list.length ? '<div class="spendlist">' + list.map(x=>
+      '<div class="spend"><span class="grow">' + esc(x.note || "—") + '</span>' +
+      '<span class="tiny faint">' + pretty(x.date) + '</span>' +
+      '<span class="tnum">' + money(x.amount) + '</span>' +
+      '<button class="linkbtn del" data-a="deltxn" data-id="' + x.id + '" title="Remove">×</button></div>').join("") + '</div>' : "") +
+    '<p class="tiny faint" style="margin-top:48px;line-height:1.6">Everything slower lives behind its own cadence — books hold the wallets, the constitution holds the answers, the board meeting holds the questions.</p>' +
+  '</div>';
+}
+
+function bookView(id){
+  const book = db.books.find(b=>b.id===id);
+  if(!book) return '<p class="sub">That book is gone.</p>';
+  const bal = balances(book.id), venture = book.kind === "venture";
+  const bp = book.bufferTarget > 0 ? Math.min(100, Math.round(bal.buffer/book.bufferTarget*100)) : 0;
+  const obs = db.obligations.filter(o=>o.bookId===book.id);
+  const projects = db.projects.filter(p=>p.bookId===book.id && p.status==="active");
+  const ended = db.projects.filter(p=>p.bookId===book.id && p.status==="ended");
+  const ledger = db.transactions.filter(t=>t.bookId===book.id).sort((a,b)=> a.date<b.date?1:-1).slice(0,20);
+
+  const stageLabel = {seeded:"Seeded",probation:"On probation","self-funding":"Self-funding",contributing:"Contributing","wound-down":"Wound down"};
+  const stageCls = {seeded:"p-warn",probation:"p-warn","self-funding":"p-teal",contributing:"p-up","wound-down":"p-mute"};
+  let pills = "";
+  if(venture && book.stage) pills += '<span class="pill ' + stageCls[book.stage] + '">' + stageLabel[book.stage] + '</span>';
+  if(venture && book.stage !== "wound-down"){
+    const r = runway(book);
+    const cls = r === Infinity ? "p-mute" : (r < 2 ? "p-down" : r < 3 ? "p-warn" : "p-up");
+    pills += '<span class="pill tnum ' + cls + '">' + (r === Infinity ? "No burn set" : r.toFixed(1) + " mo runway") + '</span>';
+  }
+
+  const wallets = '<div class="grid g3">' +
+    '<div class="card" style="padding:18px"><p class="label">Operating</p><p class="tnum" style="font-size:24px;font-weight:600">' + money(bal.operating) + '</p><p class="tiny faint" style="margin-top:4px">Where the ' + (venture?"business":"week") + ' happens. Empties by design.</p></div>' +
+    '<div class="card" style="padding:18px"><p class="label">Buffer</p><p class="tnum" style="font-size:24px;font-weight:600">' + money(bal.buffer) + '</p>' +
+      (book.bufferTarget > 0
+        ? '<div class="bar" style="margin-top:10px"><i style="width:' + bp + '%;background:' + (bp>=100?"var(--up)":"var(--teal)") + '"></i></div><p class="tiny faint" style="margin-top:5px">' + bp + '% of ' + money(book.bufferTarget) + ' target</p>'
+        : '<p class="tiny faint" style="margin-top:4px">No target set yet.</p>') + '</div>' +
+    '<div class="card" style="padding:18px"><p class="label">Wealth</p><p class="tnum" style="font-size:24px;font-weight:600">' + money(bal.wealth) + '</p><p class="tiny faint" style="margin-top:4px">One-way valve. Only ever steps upward.</p></div>' +
+  '</div>';
+
+  const projOpts = projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join("");
+  const forms = '<div class="grid g3 sec">' +
+    det("f-in-"+book.id, "Log income",
+      '<input type="hidden" name="bookId" value="'+book.id+'"><input type="hidden" name="kind" value="income">' +
+      '<div><label class="label">Amount</label><input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" required></div>' +
+      '<div style="margin-top:10px"><label class="label">Source</label><input class="field" name="source" placeholder="' + (venture?"Client, product…":"The draw, salary…") + '"></div>' +
+      '<div style="margin-top:10px"><label class="label">Into wallet</label><select class="field" name="wallet"><option value="operating">Operating</option><option value="buffer">Buffer</option><option value="wealth">Wealth</option></select></div>' +
+      '<button class="btn btn-primary" style="margin-top:14px">Add income</button>', "addtxn", "card") +
+    det("f-ex-"+book.id, "Log expense",
+      '<input type="hidden" name="bookId" value="'+book.id+'"><input type="hidden" name="kind" value="expense"><input type="hidden" name="wallet" value="operating">' +
+      '<div><label class="label">Amount</label><input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" required></div>' +
+      '<div style="margin-top:10px"><label class="label">Note</label><input class="field" name="note" placeholder="What was it?"></div>' +
+      (venture ? '<div style="margin-top:10px"><label class="label">Bucket</label><select class="field" name="bucket"><option value="burn">Burn — fixed</option><option value="fuel">Fuel — growth ceiling</option><option value="one-time">One-time — from surplus</option></select></div>' : "") +
+      (projects.length ? '<div style="margin-top:10px"><label class="label">Against a project</label><select class="field" name="projectId"><option value="">— none —</option>'+projOpts+'</select></div>' : "") +
+      '<button class="btn btn-primary" style="margin-top:14px">Add expense</button>', "addtxn", "card") +
+    det("f-tr-"+book.id, "Move between wallets",
+      '<input type="hidden" name="bookId" value="'+book.id+'"><input type="hidden" name="kind" value="transfer">' +
+      '<div><label class="label">Amount</label><input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" required></div>' +
+      '<div class="grid g2" style="margin-top:10px">' +
+        '<div><label class="label">From</label><select class="field" name="wallet"><option value="operating">Operating</option><option value="buffer">Buffer</option></select></div>' +
+        '<div><label class="label">To</label><select class="field" name="toWallet"><option value="buffer">Buffer</option><option value="operating">Operating</option><option value="wealth">Wealth</option></select></div></div>' +
+      '<p class="tiny faint" style="margin-top:10px">Wealth only receives. The valve doesn’t open backward.</p>' +
+      '<button class="btn btn-primary" style="margin-top:12px">Move</button>', "addtxn", "card") +
+  '</div>';
+
+  const obRows = obs.length ? obs.map(o=>
+    '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:500">' + esc(o.name) + '</p>' +
+    '<p class="tiny faint">' + o.cadence + (o.dueDay ? " · day " + o.dueDay : "") + '</p></div>' +
+    '<span class="tnum small">' + money(o.amount) + '</span>' +
+    '<button class="btn btn-ghost btn-sm" data-a="payobl" data-id="' + o.id + '">Mark paid</button>' +
+    '<button class="linkbtn" data-a="delobl" data-id="' + o.id + '">Remove</button></div>').join("")
+    : '<p class="rowsplit small faint">Nothing standing yet. Bills, subscriptions, allowances, fund feeding — decided once, then routine.</p>';
+
+  const obAdd = det("ob-"+book.id, "+ Add obligation",
+    '<input type="hidden" name="bookId" value="'+book.id+'">' +
+    '<div class="row" style="flex-wrap:wrap;align-items:flex-end;gap:10px">' +
+      '<div class="grow" style="min-width:150px"><label class="label">Name</label><input class="field" name="name" placeholder="Rent, payroll, tithe…" required></div>' +
+      '<div style="width:110px"><label class="label">Amount</label><input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" required></div>' +
+      '<div style="width:130px"><label class="label">Cadence</label><select class="field" name="cadence"><option value="monthly">Monthly</option><option value="weekly">Weekly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option></select></div>' +
+      '<div style="width:80px"><label class="label">Due day</label><input class="field" name="dueDay" type="number" min="1" max="31" placeholder="1"></div>' +
+      '<button class="btn btn-primary">Add</button></div>', "addobl", "", "act");
+
+  const projRows = projects.map(p=>{
+    const pb = projectBalance(p);
+    let rule = "", cap = 0, prog = "";
+    if(p.rule.type === "save"){
+      rule = "Save-toward · target " + money(p.rule.target); cap = pb.funded - pb.spent;
+      if(p.rule.target > 0) prog = '<div class="bar" style="margin-top:12px"><i style="width:' + Math.min(100,Math.round(pb.funded/p.rule.target*100)) + '%;background:var(--act)"></i></div>';
+    } else if(p.rule.type === "ceiling"){
+      rule = "Ceiling " + money(p.rule.cap) + " for " + p.rule.months + " months"; cap = p.rule.cap - pb.spent;
+    } else rule = "At most " + p.rule.fraction + "% of income since start";
+    return '<div class="card" style="padding:16px 20px;margin-bottom:12px">' +
+      '<div class="row" style="flex-wrap:wrap">' +
+        '<div class="grow"><p class="small" style="font-weight:600">' + esc(p.name) + '</p>' +
+        '<p class="tiny faint">' + rule + (p.endNote ? " · ends: " + esc(p.endNote) : "") + '</p></div>' +
+        '<p class="tnum small"><span class="sub">spent </span>' + money(pb.spent) +
+          (p.rule.type !== "fraction" ? '<span class="sub"> · left </span><span style="color:' + (cap<=0?"var(--down)":"var(--up)") + '">' + money(Math.max(0,cap)) + '</span>' : "") + '</p>' +
+        (p.rule.type === "save"
+          ? '<form class="row" data-a="fundproj" style="gap:8px"><input type="hidden" name="projectId" value="'+p.id+'">' +
+            '<input class="field tnum" name="amount" inputmode="decimal" placeholder="0.00" style="width:96px;padding:6px 10px">' +
+            '<button class="btn btn-ghost btn-sm">Fund</button></form>' : "") +
+        '<button class="linkbtn neutral" data-a="endproj" data-id="' + p.id + '">End</button>' +
+      '</div>' + prog + '</div>';
+  }).join("");
+
+  const projAdd = det("pr-"+book.id, "+ New project — four questions",
+    '<input type="hidden" name="bookId" value="'+book.id+'">' +
+    '<div class="grid g2"><div><label class="label">1 · What’s it for?</label><input class="field" name="name" placeholder="Furnishing, marketing push…" required></div>' +
+    '<div><label class="label">2 · Which book?</label><input class="field" value="' + esc(book.name) + '" disabled></div></div>' +
+    '<div style="margin-top:14px"><label class="label">3 · Funding rule</label><div class="grid g3">' +
+      '<label class="card" style="padding:12px;box-shadow:none"><span class="row" style="gap:8px;align-items:flex-start"><input type="radio" name="ruleType" value="save" checked><b class="small">Save-toward</b></span><input class="field tnum" name="target" inputmode="decimal" placeholder="Target $" style="margin-top:8px"></label>' +
+      '<label class="card" style="padding:12px;box-shadow:none"><span class="row" style="gap:8px;align-items:flex-start"><input type="radio" name="ruleType" value="ceiling"><b class="small">Ceiling for N months</b></span><input class="field tnum" name="cap" inputmode="decimal" placeholder="Cap $" style="margin-top:8px"><input class="field" name="months" type="number" min="1" placeholder="Months" style="margin-top:8px"></label>' +
+      '<label class="card" style="padding:12px;box-shadow:none"><span class="row" style="gap:8px;align-items:flex-start"><input type="radio" name="ruleType" value="fraction"><b class="small">Fraction of income</b></span><input class="field" name="fraction" type="number" step="0.5" min="0" max="100" placeholder="%" style="margin-top:8px"></label>' +
+    '</div></div>' +
+    '<div style="margin-top:14px"><label class="label">4 · When / how does it end?</label><input class="field" name="endNote" placeholder="When funded · at board meeting N · when shipped"></div>' +
+    '<button class="btn btn-primary" style="margin-top:14px">Create project</button>', "addproj", "card", "act");
+
+  const ledRows = ledger.length ? ledger.map(t=>{
+    const sign = t.kind === "income" ? "+" : t.kind === "expense" ? "−" : "";
+    const col = t.kind === "income" ? "color:var(--up)" : t.kind === "transfer" ? "color:var(--sub)" : "";
+    const desc = t.kind === "transfer"
+      ? esc(t.note || "Transfer") + " · " + t.wallet + " → " + t.toWallet
+      : esc(t.note || t.source || (t.kind === "income" ? "Income" : "Expense"));
+    return '<div class="led"><span class="d">' + pretty(t.date) + '</span>' +
+      '<span class="grow trunc">' + desc + (t.bucket ? ' <span class="tiny faint">' + t.bucket + '</span>' : "") + '</span>' +
+      '<span class="tnum" style="' + col + '">' + sign + money(t.amount) + '</span>' +
+      '<button class="linkbtn" data-a="deltxn" data-id="' + t.id + '">×</button></div>';
+  }).join("") : '<p class="led faint small">No entries yet.</p>';
+
+  const settings = det("bs-"+book.id, "Book settings",
+    '<input type="hidden" name="bookId" value="'+book.id+'">' +
+    '<div class="row" style="flex-wrap:wrap;align-items:flex-end;gap:10px">' +
+      '<div style="width:160px"><label class="label">Name</label><input class="field" name="name" value="' + esc(book.name) + '"></div>' +
+      '<div style="width:130px"><label class="label">Buffer target</label><input class="field tnum" name="bufferTarget" inputmode="decimal" value="' + dec(book.bufferTarget) + '" placeholder="0.00"></div>' +
+      (venture
+        ? '<div style="width:130px"><label class="label">Monthly burn</label><input class="field tnum" name="monthlyBurn" inputmode="decimal" value="' + dec(book.monthlyBurn) + '" placeholder="0.00"></div>' +
+          '<div style="width:150px"><label class="label">Stage</label><select class="field" name="stage">' +
+            ["seeded","probation","self-funding","contributing","wound-down"].map(s=>'<option value="'+s+'"'+(book.stage===s?" selected":"")+'>'+stageLabel[s]+'</option>').join("") + '</select></div>'
+        : '<div style="width:130px"><label class="label">Weekly number</label><input class="field tnum" name="weeklyNumber" inputmode="decimal" value="' + dec(book.weeklyNumber) + '" placeholder="0.00"></div>') +
+      '<button class="btn btn-primary">Save</button></div>', "updatebook", "card");
+
+  return '<div class="row" style="flex-wrap:wrap;gap:10px"><h1 style="font-size:26px;font-weight:600">' + esc(book.name) + '</h1>' + pills + '</div>' +
+    (venture && book.seedCeiling ? '<p class="small sub" style="margin-top:6px">Seed ceiling <b class="tnum" style="color:var(--ink)">' + money(book.seedCeiling) + '</b>' + (book.seedDeadline ? " — to prove itself by " + esc(book.seedDeadline) + "." : ".") + '</p>' : "") +
+    '<div style="margin-top:20px">' + wallets + '</div>' + forms +
+    '<div class="sec"><h2 class="sec-h">Standing obligations</h2><div class="card">' + obRows + '<div style="border-top:1px solid var(--line)">' + obAdd + '</div></div></div>' +
+    '<div class="sec"><h2 class="sec-h">Projects</h2>' + projRows +
+      (ended.length ? '<p class="tiny faint" style="margin-bottom:12px">Ended: ' + ended.map(p=>esc(p.name)).join(", ") + '</p>' : "") + projAdd + '</div>' +
+    '<div class="sec"><h2 class="sec-h">Ledger</h2><div class="card">' + ledRows + '</div></div>' +
+    '<div class="sec">' + settings + '</div>';
+}
+
+function constitutionView(){
+  const c = db.constitution;
+  const personal = db.books.find(b=>b.kind==="personal");
+  const ams = db.amendments.slice().sort((a,b)=> a.date<b.date?1:-1);
+  const amRows = ams.length ? ams.map(a=>{
+    const cls = a.status === "ratified" ? "p-up" : a.status === "rejected" ? "p-down" : "p-warn";
+    return '<div class="rowsplit" style="align-items:flex-start"><div class="grow"><p class="small" style="font-weight:500">' + esc(a.title) + '</p>' +
+      '<p class="tiny sub">' + esc(a.reason) + '</p></div>' +
+      '<span class="tiny faint">' + a.date + '</span><span class="pill ' + cls + '">' + a.status + '</span></div>';
+  }).join("") : '<p class="rowsplit small faint">No amendments. The rules are holding.</p>';
+
+  return '<h1 style="font-size:26px;font-weight:600">The Constitution</h1>' +
+    '<p class="small sub" style="margin-top:6px;max-width:62ch">One page of standing answers. When it and an impulse conflict, the constitution wins. When it and reality conflict, amend it at the meeting — never by drift.</p>' +
+    '<form class="card" style="padding:24px;margin-top:24px" data-a="saveconst">' +
+      '<div class="grid g3">' +
+        '<div><label class="label">Giving, off the top</label><div class="row" style="gap:8px"><input class="field tnum" name="givingPct" type="number" step="0.5" min="0" max="100" value="' + c.givingPct + '"><span class="small sub">%</span></div></div>' +
+        '<div><label class="label">The owner’s draw</label><input class="field tnum" name="drawAmount" inputmode="decimal" value="' + dec(c.drawAmount) + '" placeholder="0.00"></div>' +
+        '<div><label class="label">Draw cadence</label><select class="field" name="drawCadence">' + ["weekly","biweekly","monthly"].map(x=>'<option value="'+x+'"'+(c.drawCadence===x?" selected":"")+'>'+x[0].toUpperCase()+x.slice(1)+'</option>').join("") + '</select></div>' +
+      '</div>' +
+      '<div style="margin-top:18px"><label class="label">Surplus split (business, by written rule)</label><div class="grid g3">' +
+        '<div class="row" style="gap:8px"><input class="field tnum" name="splitWealth" type="number" min="0" max="100" value="' + c.surplusSplit.wealth + '"><span class="tiny sub">% wealth</span></div>' +
+        '<div class="row" style="gap:8px"><input class="field tnum" name="splitGrowth" type="number" min="0" max="100" value="' + c.surplusSplit.growth + '"><span class="tiny sub">% growth</span></div>' +
+        '<div class="row" style="gap:8px"><input class="field tnum" name="splitOnward" type="number" min="0" max="100" value="' + c.surplusSplit.onward + '"><span class="tiny sub">% onward</span></div>' +
+      '</div></div>' +
+      '<div style="margin-top:18px"><label class="label">Articles &amp; notes</label><textarea class="field" name="notes" rows="4" placeholder="Fill the tank every week, low or not…">' + esc(c.notes) + '</textarea></div>' +
+      '<button class="btn btn-primary" style="margin-top:18px">Save the constitution</button>' +
+    '</form>' +
+    '<div class="grid g2" style="margin-top:14px">' +
+      '<div class="card" style="padding:18px"><p class="label">Weekly number (personal)</p><p class="tnum" style="font-size:20px;font-weight:600">' + (personal && personal.weeklyNumber ? money(personal.weeklyNumber) : "—") + '</p><p class="tiny faint" style="margin-top:4px">Derived from observed reality, never declared by aspiration.</p></div>' +
+      '<div class="card" style="padding:18px"><p class="label">Buffer targets</p>' + db.books.map(b=>'<div class="row" style="justify-content:space-between"><span class="small sub">' + esc(b.name) + '</span><span class="tnum small">' + (b.bufferTarget ? money(b.bufferTarget) : "—") + '</span></div>').join("") + '</div>' +
+    '</div>' +
+    '<div class="sec"><h2 class="sec-h">Amendment log</h2>' +
+      '<p class="small sub" style="margin-bottom:12px">Mid-quarter changes are allowed — in daylight. Thirty seconds of written honesty, ratified at the next meeting.</p>' +
+      '<div class="card">' + amRows + '<div style="border-top:1px solid var(--line)">' +
+        det("am-new", "+ Log an amendment",
+          '<div><label class="label">What changed</label><input class="field" name="title" placeholder="Raised the weekly number to $220" required></div>' +
+          '<div style="margin-top:10px"><label class="label">Why — the thirty seconds of honesty</label><textarea class="field" name="reason" rows="2" placeholder="Because…" required></textarea></div>' +
+          '<button class="btn btn-primary" style="margin-top:12px">Log it</button>', "addam", "", "act") +
+      '</div></div></div>';
+}
+
+const SERIES = [{k:"operating",n:"Operating",c:"#FF9500"},{k:"buffer",n:"Buffer",c:"#30B0C7"},{k:"wealth",n:"Wealth",c:"#5856D6"}];
+
+function chartSvg(bookId, weeks, labels){
+  const W = 640, H = 210, P = {t:12,r:92,b:24,l:46};
+  const series = SERIES.map(s=>({name:s.n,color:s.c,values:weeks.map(w=> balances(bookId, iso(addDays(w,6)))[s.k]/100)}));
+  const all = series.flatMap(s=>s.values);
+  const max = Math.max(1, ...all), min = Math.min(0, ...all);
+  const iw = W-P.l-P.r, ih = H-P.t-P.b, n = Math.max(1, weeks.length-1);
+  const xs = weeks.map((_,i)=> P.l + i/n*iw);
+  const y = v => P.t + ih - (v-min)/(max-min)*ih;
+  const fmt = v => Math.abs(v) >= 1000 ? "$" + (v/1000).toFixed(v%1000===0?0:1) + "k" : "$" + Math.round(v).toLocaleString();
+
+  let g = "";
+  [min, min+(max-min)/2, max].forEach(v=>{
+    g += '<line x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#E9E8E3"/>' +
+         '<text x="'+(P.l-8)+'" y="'+(y(v)+3)+'" text-anchor="end" font-size="10" fill="#AEAEB2">'+fmt(v)+'</text>';
+  });
+  [...new Set([0, Math.floor((weeks.length-1)/2), weeks.length-1])].forEach(i=>{
+    g += '<text x="'+xs[i]+'" y="'+(H-5)+'" text-anchor="middle" font-size="10" fill="#AEAEB2">'+labels[i]+'</text>';
+  });
+  let lines = "", dots = "";
+  series.forEach((s,si)=>{
+    lines += '<path d="' + xs.map((x,i)=>(i?"L":"M")+x+","+y(s.values[i])).join(" ") + '" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<text x="'+(W-P.r+10)+'" y="'+(y(s.values[weeks.length-1])+3+(si===1?4:si===2?-4:0))+'" font-size="11" font-weight="600" fill="#1D1D1F"><tspan fill="'+s.color+'">●</tspan> '+s.name+'</text>';
+    dots += '<circle class="hv" data-si="'+si+'" r="4" fill="'+s.color+'" stroke="#fff" stroke-width="2" style="display:none"/>';
+  });
+  const data = JSON.stringify({xs:xs, ys:series.map(s=>s.values.map(y)), vals:series.map(s=>s.values), labels:labels, W:W, top:P.t, bot:H-P.b});
+
+  const table = '<details><summary style="padding:8px 0;font-size:12px;color:var(--faint)">View as table</summary><div class="scroll"><table class="tbl"><thead><tr><th>Week</th>' +
+    series.map(s=>'<th>'+s.name+'</th>').join("") + '</tr></thead><tbody>' +
+    labels.map((l,i)=>'<tr><td class="sub">'+l+'</td>'+series.map(s=>'<td class="tnum">'+fmt(s.values[i])+'</td>').join("")+'</tr>').join("") +
+    '</tbody></table></div></details>';
+
+  return '<div class="chartbox" data-chart=\'' + data.replace(/'/g,"&#39;") + '\'>' +
+    '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Weekly wallet balances this quarter">' + g +
+    '<line class="cross" stroke="#AEAEB2" stroke-dasharray="3 3" style="display:none"/>' + lines + dots + '</svg>' +
+    '<div class="tip"></div>' + table + '</div>';
+}
+
+function meetingView(){
+  const q = quarterInfo(), t = today();
+  const weeks = [];
+  let w = weekStart(fromIso(q.start));
+  if(iso(w) < q.start) w = addDays(w, 7);
+  while(iso(w) <= iso(t) && iso(w) <= q.end){ weeks.push(new Date(w)); w = addDays(w, 7); }
+  const labels = weeks.map(d=>pretty(iso(d)));
+
+  const personal = db.books.find(b=>b.kind==="personal");
+  const num = personal ? (personal.weeklyNumber||0) : 0;
+  const done = weeks.filter(d=> addDays(d,7) <= t);
+  const ok = personal ? done.filter(d=> weeklySpent(personal.id, d) <= num).length : 0;
+
+  const inc = new Map();
+  for(const x of db.transactions){
+    if(x.kind !== "income" || x.date < q.start || x.date > q.end) continue;
+    const k = x.source || "Unlabeled";
+    inc.set(k, (inc.get(k)||0) + x.amount);
+  }
+  const ventures = db.books.filter(b=>b.kind==="venture" && b.stage!=="wound-down");
+  const pending = db.amendments.filter(a=>a.status==="pending");
+  const active = db.books.filter(b=>b.stage!=="wound-down");
+  const aprojects = db.projects.filter(p=>p.status==="active");
+  const meetings = db.meetings.slice().sort((a,b)=> a.date<b.date?1:-1);
+
+  const brief = '<div class="grid g3" style="margin-top:22px">' +
+    '<div class="card" style="padding:18px"><p class="label">Weekly adherence</p><p class="tnum" style="font-size:24px;font-weight:600">' +
+      (done.length ? '<span style="color:' + (ok===done.length?"var(--up)":ok < done.length/2?"var(--down)":"var(--ink)") + '">'+ok+'</span><span class="sub"> / '+done.length+'</span>' : "—") +
+      '</p><p class="tiny faint" style="margin-top:4px">completed weeks under the number</p></div>' +
+    '<div class="card" style="padding:18px"><p class="label">Income by source</p>' +
+      (inc.size ? [...inc.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>'<div class="row" style="justify-content:space-between"><span class="small sub trunc">'+esc(e[0])+'</span><span class="tnum small">'+money(e[1])+'</span></div>').join("") : '<p class="small faint">None recorded this quarter.</p>') +
+      '</div>' +
+    '<div class="card" style="padding:18px"><p class="label">Runway</p>' +
+      (ventures.length ? ventures.map(b=>{
+        const r = runway(b);
+        const col = r===Infinity?"var(--faint)":r<2?"var(--down)":r<3?"var(--warn)":"var(--up)";
+        return '<div class="row" style="justify-content:space-between"><span class="small sub trunc">'+esc(b.name)+'</span><span class="tnum small" style="color:'+col+'">'+(r===Infinity?"—":r.toFixed(1)+" mo")+'</span></div>';
+      }).join("") : '<p class="small faint">No ventures on the books.</p>') +
+      '</div></div>';
+
+  const charts = weeks.length ? active.map(b=>
+    '<div class="card" style="padding:18px;margin-top:16px">' +
+      '<div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
+        '<h2 style="font-size:16px;font-weight:600">' + esc(b.name) + '</h2>' +
+        '<p class="tiny faint">Operating flat and boring · buffer holds · wealth only steps upward</p></div>' +
+      chartSvg(b.id, weeks, labels) + '</div>').join("") : "";
+
+  const ledgers = aprojects.length ? '<div class="sec"><h2 class="sec-h">Project &amp; venture ledgers</h2><div class="card">' +
+    aprojects.map(p=>{
+      const pb = projectBalance(p), bn = (db.books.find(b=>b.id===p.bookId)||{}).name || "";
+      return '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:500">'+esc(p.name)+'</p><p class="tiny faint">'+esc(bn)+' · what did the money buy?</p></div>' +
+        '<p class="tnum small sub">funded '+money(pb.funded)+' · spent <b style="color:var(--ink)">'+money(pb.spent)+'</b></p></div>';
+    }).join("") + '</div></div>' : "";
+
+  const amRows = pending.length ? pending.map(a=>
+    '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:500">'+esc(a.title)+'</p><p class="tiny sub">'+a.date+' — '+esc(a.reason)+'</p></div>' +
+    '<button class="btn btn-up btn-sm" data-a="decide" data-id="'+a.id+'" data-v="ratified">Ratify</button>' +
+    '<button class="btn btn-down btn-sm" data-a="decide" data-id="'+a.id+'" data-v="rejected">Reject</button></div>').join("")
+    : '<p class="rowsplit small faint">Nothing pending. Drift, if any, happened in daylight.</p>';
+
+  const venture = det("newventure", "Found a new venture",
+    '<p class="tiny faint" style="margin-bottom:14px;line-height:1.6">Constitutional law of creation: seed capital comes from surplus or a deliberate wealth allocation — never from buffers, never from another venture’s operating money. The seed is a ceiling with a date. Every venture is born on probation.</p>' +
+    '<div class="grid g2">' +
+      '<div><label class="label">Name</label><input class="field" name="name" placeholder="The new book’s name" required></div>' +
+      '<div><label class="label">Seed amount (arrives in operating)</label><input class="field tnum" name="seedAmount" inputmode="decimal" placeholder="0.00"></div>' +
+      '<div><label class="label">Seed ceiling</label><input class="field tnum" name="seedCeiling" inputmode="decimal" placeholder="0.00"></div>' +
+      '<div><label class="label">To prove itself by</label><input class="field" name="seedDeadline" placeholder="Board meeting Q1 2027"></div>' +
+      '<div><label class="label">Expected monthly burn</label><input class="field tnum" name="monthlyBurn" inputmode="decimal" placeholder="0.00"></div>' +
+      '<div><label class="label">Buffer target (2–3 months of burn)</label><input class="field tnum" name="bufferTarget" inputmode="decimal" placeholder="0.00"></div>' +
+    '</div><button class="btn btn-primary" style="margin-top:16px">Open the book</button>', "addvent", "card");
+
+  const history = meetings.map(m=>
+    '<div class="card" style="padding:16px 20px;margin-top:12px"><p class="small" style="font-weight:600">' + esc(m.label) +
+    ' <span class="tiny faint" style="font-weight:400;margin-left:6px">' + m.date + '</span></p>' +
+    '<ul style="margin:8px 0 0;padding-left:20px" class="small sub">' + m.resolutions.map(r=>'<li>'+esc(r)+'</li>').join("") + '</ul>' +
+    (m.notes ? '<p class="tiny faint" style="margin-top:8px">'+esc(m.notes)+'</p>' : "") + '</div>').join("");
+
+  return '<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+      '<h1 style="font-size:26px;font-weight:600">The Board Meeting</h1>' +
+      '<span class="pill p-mute">' + q.label + ' · week ' + Math.max(1,weeks.length) + ' of 13</span></div>' +
+    '<p class="small sub" style="margin-top:6px;max-width:62ch">The only place where the system itself may be questioned. Doubt has an appointment, so it doesn’t wander the halls.</p>' +
+    brief + charts + ledgers +
+    '<div class="sec"><h2 class="sec-h">Amendments awaiting ratification</h2><div class="card">' + amRows + '</div></div>' +
+    '<div class="sec">' + venture + '</div>' +
+    '<div class="sec"><h2 class="sec-h">Resolutions</h2><form class="card" style="padding:20px" data-a="closemeeting">' +
+      '<input type="hidden" name="label" value="' + q.label + '">' +
+      '<div><label class="label">Next quarter’s numbers, ratified changes, births &amp; wind-downs — one per line</label>' +
+      '<textarea class="field" name="resolutions" rows="4" required placeholder="Weekly number holds at $250&#10;Buffer target raised to $12,000"></textarea></div>' +
+      '<div style="margin-top:12px"><label class="label">Notes (optional)</label><input class="field" name="notes"></div>' +
+      '<button class="btn btn-primary" style="margin-top:14px">Close the meeting — resolutions in force until next quarter</button>' +
+    '</form>' + history + '</div>';
+}
+
+/* ============ render ============ */
+function bannerHtml(){
+  return banner ? '<div class="banner"><b>The rule held.</b><span>' + esc(banner) + '</span></div>' : "";
+}
+function view(){
+  if(route === "week") return weekView();
+  if(route === "constitution") return constitutionView();
+  if(route === "meeting") return meetingView();
+  if(route.startsWith("book:")) return bookView(route.slice(5));
+  return weekView();
+}
+function footer(){
+  return '<div class="foot"><span>Static preview · saved in this browser only.</span>' +
+    '<button class="btn btn-ghost btn-sm" data-a="reseed">Reload demo data</button>' +
+    '<button class="btn btn-ghost btn-sm" data-a="empty">Start empty</button></div>';
+}
+function render(toTop){
+  const app = document.getElementById("app");
+  const y = window.scrollY;
+  if(!authed){ app.innerHTML = loginView(); const f = app.querySelector("#pw"); if(f) f.focus(); return; }
+  app.innerHTML = navView() + '<main class="wrap">' + bannerHtml() + view() + footer() + '</main>';
+  wireCharts();
+  window.scrollTo(0, toTop ? 0 : y);
+}
+
+/* ============ chart interaction ============ */
+function wireCharts(){
+  document.querySelectorAll(".chartbox").forEach(box=>{
+    const d = JSON.parse(box.getAttribute("data-chart"));
+    const svg = box.querySelector("svg"), tip = box.querySelector(".tip");
+    const cross = box.querySelector(".cross"), dots = box.querySelectorAll(".hv");
+    function at(clientX){
+      const r = svg.getBoundingClientRect();
+      const px = (clientX - r.left)/r.width*d.W;
+      let best = 0, bd = Infinity;
+      d.xs.forEach((x,i)=>{ const dd = Math.abs(x-px); if(dd < bd){ bd = dd; best = i; } });
+      cross.setAttribute("x1", d.xs[best]); cross.setAttribute("x2", d.xs[best]);
+      cross.setAttribute("y1", d.top); cross.setAttribute("y2", d.bot);
+      cross.style.display = "";
+      dots.forEach((c,si)=>{ c.setAttribute("cx", d.xs[best]); c.setAttribute("cy", d.ys[si][best]); c.style.display = ""; });
+      const fmt = v => Math.abs(v) >= 1000 ? "$"+(v/1000).toFixed(v%1000===0?0:1)+"k" : "$"+Math.round(v).toLocaleString();
+      tip.innerHTML = "<h4>" + d.labels[best] + "</h4>" + SERIES.map((s,si)=>
+        '<div class="r"><span class="dot" style="background:'+s.c+'"></span><span class="sub">'+s.n+'</span><span class="v tnum">'+fmt(d.vals[si][best])+'</span></div>').join("");
+      tip.style.display = "block";
+      const pctX = d.xs[best]/d.W*100;
+      tip.style.left = pctX + "%";
+      tip.style.transform = d.xs[best] > d.W/2 ? "translateX(calc(-100% - 12px))" : "translateX(12px)";
+    }
+    svg.addEventListener("mousemove", e=>at(e.clientX));
+    svg.addEventListener("touchstart", e=>at(e.touches[0].clientX), {passive:true});
+    svg.addEventListener("touchmove", e=>at(e.touches[0].clientX), {passive:true});
+    function off(){ tip.style.display = "none"; cross.style.display = "none"; dots.forEach(c=>c.style.display="none"); }
+    svg.addEventListener("mouseleave", off);
+    svg.addEventListener("touchend", off);
+  });
+}
+
+/* ============ actions ============ */
+function addTxn(f, backRoute){
+  const kind = f.kind, amount = parseMoney(f.amount);
+  if(!amount || amount <= 0) return;
+  const wallet = f.wallet || "operating";
+  if(kind === "transfer"){
+    if(wallet === "wealth") return fail("Wealth is a one-way valve — money does not come back out.");
+    if(!f.toWallet || f.toWallet === wallet) return fail("Pick two different wallets.");
+    const bal = balances(f.bookId);
+    if(amount > bal[wallet]) return fail("Not enough in " + wallet + " for that transfer.");
+  }
+  if(kind === "expense" && f.projectId){
+    const p = db.projects.find(x=>x.id===f.projectId);
+    if(p){
+      const pb = projectBalance(p);
+      if(p.rule.type === "save" && pb.spent + amount > pb.funded)
+        return fail(p.name + " is save-toward: it can only spend what it has accumulated (" + money(pb.funded-pb.spent) + " available).");
+      if(p.rule.type === "ceiling" && pb.spent + amount > p.rule.cap)
+        return fail(p.name + " would break its ceiling.");
+      if(p.rule.type === "fraction"){
+        const allowed = Math.floor(p.rule.fraction/100 * bookIncome(p.bookId, p.start, iso(today())));
+        if(pb.spent + amount > allowed)
+          return fail(p.name + " may consume at most " + p.rule.fraction + "% of income since it began — that ration is spent.");
+      }
+    }
+  }
+  db.transactions.push({
+    id:uid(), bookId:f.bookId, date:f.date || iso(today()), kind, wallet,
+    toWallet: kind === "transfer" ? f.toWallet : undefined,
+    amount, note:f.note || undefined, source: kind === "income" ? (f.source||undefined) : undefined,
+    bucket:f.bucket || undefined, projectId:f.projectId || undefined, obligationId:f.obligationId || undefined
+  });
+  save(); banner = ""; if(backRoute) route = backRoute; render();
+}
+
+const forms = {
+  login(f){
+    if(f.password === PASSWORD){ authed = true; banner = ""; try{ sessionStorage.setItem(SESS,"1"); }catch(e){} render(); }
+    else fail("That password isn’t right.");
+  },
+  quickspend(f){
+    const book = db.books.find(b=>b.kind==="personal") || db.books[0];
+    addTxn({bookId:book.id, kind:"expense", wallet:"operating", amount:f.amount, note:f.note});
+  },
+  addtxn(f){ addTxn(f); },
+  addobl(f){
+    const amount = parseMoney(f.amount);
+    if(!f.name || amount <= 0) return;
+    db.obligations.push({id:uid(), bookId:f.bookId, name:f.name, amount, cadence:f.cadence||"monthly", dueDay:parseInt(f.dueDay)||undefined});
+    save(); render();
+  },
+  fundproj(f){
+    const p = db.projects.find(x=>x.id===f.projectId), amount = parseMoney(f.amount);
+    if(!p || amount <= 0) return;
+    if(amount > balances(p.bookId).operating) return fail("Not enough in operating to fund that.");
+    db.transactions.push({id:uid(), bookId:p.bookId, date:iso(today()), kind:"transfer", wallet:"operating", toWallet:"operating", amount, note:"Fund "+p.name, projectId:p.id});
+    save(); banner=""; render();
+  },
+  addproj(f){
+    if(!f.name) return;
+    let rule;
+    if(f.ruleType === "ceiling") rule = {type:"ceiling", cap:parseMoney(f.cap), months:parseInt(f.months)||3};
+    else if(f.ruleType === "fraction") rule = {type:"fraction", fraction:parseFloat(f.fraction)||10};
+    else rule = {type:"save", target:parseMoney(f.target)};
+    db.projects.push({id:uid(), bookId:f.bookId, name:f.name, rule, start:iso(today()), endNote:f.endNote||undefined, status:"active"});
+    save(); render();
+  },
+  updatebook(f){
+    const b = db.books.find(x=>x.id===f.bookId);
+    if(!b) return;
+    if(f.name) b.name = f.name;
+    if("bufferTarget" in f) b.bufferTarget = parseMoney(f.bufferTarget);
+    if("weeklyNumber" in f) b.weeklyNumber = parseMoney(f.weeklyNumber);
+    if("monthlyBurn" in f) b.monthlyBurn = parseMoney(f.monthlyBurn);
+    if(f.stage) b.stage = f.stage;
+    save(); render();
+  },
+  addvent(f){
+    if(!f.name) return;
+    const id = uid();
+    db.books.push({id, name:f.name, kind:"venture", stage:"seeded", bufferTarget:parseMoney(f.bufferTarget), monthlyBurn:parseMoney(f.monthlyBurn), seedCeiling:parseMoney(f.seedCeiling)||undefined, seedDeadline:f.seedDeadline||undefined, createdAt:iso(today())});
+    const seed = parseMoney(f.seedAmount);
+    if(seed > 0) db.transactions.push({id:uid(), bookId:id, date:iso(today()), kind:"income", wallet:"operating", amount:seed, source:"Seed capital", note:"Seeded from surplus / deliberate wealth allocation"});
+    save(); go("book:"+id);
+  },
+  addam(f){
+    if(!f.title) return;
+    db.amendments.push({id:uid(), date:iso(today()), title:f.title, reason:f.reason||"", status:"pending"});
+    save(); render();
+  },
+  saveconst(f){
+    db.constitution = {
+      givingPct: parseFloat(f.givingPct)||0,
+      drawAmount: parseMoney(f.drawAmount),
+      drawCadence: f.drawCadence||"monthly",
+      surplusSplit:{wealth:parseFloat(f.splitWealth)||0, growth:parseFloat(f.splitGrowth)||0, onward:parseFloat(f.splitOnward)||0},
+      notes: f.notes||""
+    };
+    save(); render();
+  },
+  closemeeting(f){
+    const res = (f.resolutions||"").split("\n").map(s=>s.trim()).filter(Boolean);
+    db.meetings.push({id:uid(), label:f.label, date:iso(today()), resolutions:res, notes:f.notes||undefined});
+    save(); render();
+  }
+};
+
+const clicks = {
+  logout(){ authed = false; banner = ""; try{ sessionStorage.removeItem(SESS); }catch(e){} render(); },
+  deltxn(el){ db.transactions = db.transactions.filter(t=>t.id!==el.dataset.id); save(); render(); },
+  delobl(el){ db.obligations = db.obligations.filter(o=>o.id!==el.dataset.id); save(); render(); },
+  payobl(el){
+    const o = db.obligations.find(x=>x.id===el.dataset.id);
+    if(!o) return;
+    const bk = db.books.find(b=>b.id===o.bookId);
+    db.transactions.push({id:uid(), bookId:o.bookId, date:iso(today()), kind:"expense", wallet:"operating", amount:o.amount, note:o.name, obligationId:o.id, bucket: bk && bk.kind==="venture" ? "burn" : undefined});
+    save(); render();
+  },
+  endproj(el){ const p = db.projects.find(x=>x.id===el.dataset.id); if(p){ p.status = "ended"; save(); render(); } },
+  decide(el){
+    const a = db.amendments.find(x=>x.id===el.dataset.id);
+    if(a){ a.status = el.dataset.v; a.decidedAt = iso(today()); save(); render(); }
+  },
+  reseed(){ db = demoDb(); save(); go("week"); },
+  empty(){ db = emptyDb(); save(); go("week"); }
+};
+
+/* form action names → handler, plus the generic txn forms */
+const FORM_MAP = {
+  login:"login", quickspend:"quickspend", addobl:"addobl", fundproj:"fundproj",
+  addproj:"addproj", updatebook:"updatebook", addvent:"addvent", addam:"addam",
+  saveconst:"saveconst", closemeeting:"closemeeting"
+};
+
+document.addEventListener("submit", e=>{
+  const form = e.target.closest("form");
+  if(!form) return;
+  e.preventDefault();
+  const f = {};
+  new FormData(form).forEach((v,k)=>{ f[k] = typeof v === "string" ? v.trim() : v; });
+  const a = form.dataset.a;
+  if(a && forms[a]) return forms[a](f);
+  // detail-block forms are identified by which fields they carry
+  if(a === "addtxn" || f.kind) return addTxn(f);
+});
+
+document.addEventListener("click", e=>{
+  const goEl = e.target.closest("[data-go]");
+  if(goEl) return go(goEl.dataset.go);
+  const el = e.target.closest("[data-a]");
+  if(!el || el.tagName === "FORM") return;
+  const a = el.dataset.a;
+  if(clicks[a]){ e.preventDefault(); clicks[a](el); }
+});
+
+document.addEventListener("toggle", e=>{
+  const d = e.target;
+  if(d.tagName !== "DETAILS" || !d.dataset.id) return;
+  if(d.open) openIds.add(d.dataset.id); else openIds.delete(d.dataset.id);
+}, true);
+
+/* ============ boot ============ */
+db = load();
+if(!db){ db = demoDb(); save(); }
+try{ authed = sessionStorage.getItem(SESS) === "1"; }catch(e){}
+render();
+</script>

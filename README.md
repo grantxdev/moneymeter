@@ -23,6 +23,27 @@ setting an environment variable (see `.env.local.example`):
 MONEYMETER_PASSWORD=your-password
 ```
 
+## Two ways to run it
+
+**The full app** (above) — Next.js, server-rendered, data in a JSON file on disk.
+This is the real instrument: one server, one user, data you can back up by
+copying a file.
+
+**The static preview** — `static/index.html` is the same app rebuilt as one
+self-contained file (fonts inlined, state in the browser's `localStorage`). It
+needs no server at all: open it from disk, or host it anywhere static. Rebuild
+it after editing `static/index.template.html`:
+
+```bash
+npm run build:static
+```
+
+It ships with demo data so there's something to look at, and has "Reload demo
+data" / "Start empty" controls in the footer. The password gate is cosmetic in
+this build — a static page can't keep a secret, so treat the preview as public
+if you host it publicly. `.github/workflows/pages.yml` will publish it to GitHub
+Pages on pushes to `main`, once Pages is enabled for the repo.
+
 ## Where the data lives
 
 Everything is stored in `data/db.json` — a plain JSON file next to the app
