@@ -379,7 +379,9 @@ summary.act{color:var(--act)}
 
 <script>
 "use strict";
-const PASSWORD = "moneymeter";
+/* Six digits, typed on a number pad. Not a secret — it ships in this file —
+   only a door that stays shut to whoever wanders past. */
+const PASSCODE = "314159";
 const KEY = "moneymeter.db.v2";
 const SESS = "moneymeter.authed";
 
@@ -456,6 +458,69 @@ function rhythmSpent(r, startD){
 }
 function met(r, spent){ return r.type==="fixed" ? spent >= r.amount : spent <= r.amount; }
 
+/* ============ expected dates ============
+   A rhythm coarser than a week falls on a day, not merely "sometime this
+   month". Monthly carries a day of the month; quarterly a month-of-quarter
+   (1–3) plus a day; annual a calendar month (1–12) plus a day. Absent values
+   mean the first. This is what keeps rent off every week's board. */
+function clampInt(n, lo, hi){ n = parseInt(n,10); if(!isFinite(n)) n = lo; return Math.min(Math.max(n,lo),hi); }
+function daysInMonth(y, m){ return new Date(y, m+1, 0).getDate(); }
+function dueDateFor(r, ps){
+  if(r.cadence==="weekly") return null;
+  const y = ps.getFullYear();
+  let m = ps.getMonth();
+  if(r.cadence==="quarterly") m += clampInt(r.dueMonth,1,3) - 1;
+  else if(r.cadence==="annual") m = clampInt(r.dueMonth,1,12) - 1;
+  return new Date(y, m, Math.min(clampInt(r.dueDay,1,31), daysInMonth(y,m)));
+}
+/** Its expected date in whichever period the given day belongs to. */
+function dueDateOn(r, d){ return dueDateFor(r, periodStart(r.cadence, d || today())); }
+/** Does its expected date land inside the week beginning ws? Both ends of the
+    week are checked, so a period boundary falling mid-week — a new year, a
+    quarter turning — can never hide the thing that is due. */
+function dueInWeek(r, ws){
+  if(r.cadence==="weekly") return true;
+  const we = addDays(ws,6);
+  for(const anchor of [ws, we]){
+    const d = dueDateFor(r, periodStart(r.cadence, anchor));
+    if(d && d>=ws && d<=we) return true;
+  }
+  return false;
+}
+function ord(n){ const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+function dueLabel(r, d){
+  if(r.cadence==="weekly") return "every week";
+  if(r.cadence==="monthly") return "due the "+ord(clampInt(r.dueDay,1,31));
+  const md = dueDateOn(r, d).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  return r.cadence==="quarterly" ? "due "+md+", each quarter" : "due "+md;
+}
+
+/* ============ reserves — the set-aside behind an obligation ============
+   Rent is monthly and simply paid. An annual premium is not: it is carried a
+   twelfth at a time and settled once, on its date. A reserved obligation
+   accrues one contribution per month from the day it was set and is drawn
+   down by what is charged to it. The accrual says what should have been put
+   aside; the shortfall flag is what keeps that honest. */
+const CAD_MONTHS = {weekly:0, monthly:1, quarterly:3, annual:12};
+function contribMonthly(r){ return Math.round(r.amount / (CAD_MONTHS[r.cadence] || 1)); }
+function monthsBetween(a, b){ return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()); }
+/** A reserve only makes sense for an obligation you cannot skip, on a beat
+    slower than the month you fund it from. */
+function isReserved(r){ return !!r.reserve && r.type==="fixed" && (r.cadence==="quarterly" || r.cadence==="annual"); }
+function reserveState(r, d){
+  const now = d || today(), start = fromIso(r.start), contrib = contribMonthly(r);
+  let drawn = 0;
+  for(const t of db.transactions)
+    if(t.rhythmId===r.id && t.kind==="expense" && t.date>=r.start) drawn += t.amount;
+  // Once this period's date has gone by, the question is about the next one —
+  // a shortfall you can still do something about, not one already behind you.
+  let due = dueDateOn(r, now);
+  if(due < now) due = dueDateFor(r, addDays(periodEnd(r.cadence, periodStart(r.cadence, now)), 1));
+  const held = contrib * (monthsBetween(start, now) + 1) - drawn;
+  const atDue = contrib * (monthsBetween(start, due) + 1) - drawn;
+  return {contrib, due, held, atDue, short: Math.max(0, r.amount - atDue)};
+}
+
 /** Completed periods, newest first, bounded by when the rhythm was set. */
 function completedPeriods(r, max){
   const out = [];
@@ -488,9 +553,25 @@ function historyStrip(r, n){
   h += '<i class="now" title="this ' + CAD_UNIT[r.cadence] + ', still open"></i>';
   return '<span class="strip">' + h + '</span>';
 }
-/** The number is not declared — it is the sum of the rhythms at that cadence. */
-function periodNumber(bookId, cad){
-  return rhythmsFor(bookId, cad).reduce((s,r)=> s + r.amount, 0);
+/** The rhythms a period actually answers for. A weekly book answers for its
+    weekly rhythms always, and for a coarser obligation only in the week its
+    expected date lands — rent belongs to the week rent is due, not to all
+    four. Anything on a slower beat answers for its own cadence alone. */
+function rhythmsInPlay(bookId, cad, d){
+  const own = rhythmsFor(bookId, cad);
+  if(cad !== "weekly") return own;
+  const ws = periodStart("weekly", d || today());
+  return own.concat(db.rhythms.filter(r => !r.archived && (!bookId || r.bookId===bookId)
+    && r.cadence !== "weekly" && dueInWeek(r, ws)));
+}
+/** A reserved obligation was funded a month at a time; when its date comes it
+    is settled out of that reserve, so it must not land on the period's number
+    a second time. It still shows — it is just already paid for. */
+function countsToward(r){ return !isReserved(r); }
+
+/** The number is not declared — it is the sum of the rhythms in play. */
+function periodNumber(bookId, cad, d){
+  return rhythmsInPlay(bookId, cad, d).filter(countsToward).reduce((s,r)=> s + r.amount, 0);
 }
 function weeklyNumber(bookId){ return periodNumber(bookId, "weekly"); }
 
@@ -503,7 +584,7 @@ function bookCadence(bookId){
 function periodSpend(bookId, cad, d){
   const ps = periodStart(cad, d);
   const s = iso(ps), e = iso(periodEnd(cad, ps));
-  const ids = new Set(rhythmsFor(bookId, cad).map(r=>r.id));
+  const ids = new Set(rhythmsInPlay(bookId, cad, d).filter(countsToward).map(r=>r.id));
   let sum = 0;
   for(const t of db.transactions){
     if(t.bookId!==bookId || t.kind!=="expense" || t.wallet!=="operating") continue;
@@ -582,20 +663,22 @@ function phead(title, role){
   return '<div class="phead"><h1>'+title+'</h1><p class="role">'+role+'</p></div>';
 }
 function rhythmOptions(bookId, cad, selected){
-  const rs = rhythmsFor(bookId, cad);
+  const rs = rhythmsInPlay(bookId, cad);
   return rs.map(r=>'<option value="'+r.id+'"'+(selected===r.id?" selected":"")+'>'+esc(r.name)+' · '+money(r.amount)+'/'+CAD_UNIT[r.cadence]+'</option>').join("");
 }
 
 /* ============ views ============ */
 function loginView(){
   return '<div class="login"><div class="login-in">'+
-    '<h1>MoneyMeter</h1><p class="tag">A constitution for money.</p>'+
-    '<form class="card" data-a="login">'+
-      '<label class="label" for="pw">Password</label>'+
-      '<input class="field" id="pw" name="password" type="password" autofocus placeholder="Enter password" autocomplete="current-password">'+
+    '<h1>MoneyMeter</h1>'+
+    '<form class="card" data-a="login" style="margin-top:22px">'+
+      '<label class="label" for="pw">Passcode</label>'+
+      '<input class="field tnum" id="pw" name="passcode" type="password" autofocus placeholder="6 digits" '+
+        'inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" '+
+        'style="text-align:center;letter-spacing:.4em;font-size:20px">'+
       (banner?'<p class="small" style="color:var(--down);margin-top:8px">'+esc(banner)+'</p>':"")+
       '<button class="btn btn-primary">Enter</button></form>'+
-    '<p class="tiny faint" style="text-align:center;margin-top:22px">Private preview — the password is <b>moneymeter</b>.</p>'+
+    '<p class="tiny faint" style="text-align:center;margin-top:22px">Private instance — one seat at this table.</p>'+
   '</div></div>';
 }
 
@@ -650,10 +733,14 @@ function homeView(){
       'Tap a card to open its book. Each book holds its own rhythms; the board meeting holds the questions.</p>';
 }
 
-function rhythmRow(r, ws){
-  const s = rhythmSpent(r, ws), p = r.amount>0 ? Math.min(100, Math.round(s/r.amount*100)) : 0;
+/* A line reads against its own period, not the page's — a monthly obligation
+   surfacing in the week it falls due is still measured across its month. */
+function rhythmRow(r, t){
+  const s = rhythmSpent(r, periodStart(r.cadence, t));
+  const p = r.amount>0 ? Math.min(100, Math.round(s/r.amount*100)) : 0;
   const o = s > r.amount;
-  return '<div class="rhythmline"><span class="nm trunc">'+esc(r.name)+'</span>'+
+  const when = r.cadence==="weekly" ? "" : ' <span class="faint">· '+dueLabel(r,t)+'</span>';
+  return '<div class="rhythmline"><span class="nm trunc">'+esc(r.name)+when+'</span>'+
     '<span class="fig tnum small'+(o?'" style="color:var(--down)':"")+'">'+money(s)+
       '<span class="faint"> / '+money(r.amount)+'</span></span>'+
     '<span class="bar"><i style="width:'+(o?100:p)+'%;background:'+(o?"var(--down)":p>=85?"var(--warn)":"var(--up)")+'"></i></span></div>';
@@ -672,7 +759,7 @@ const SEG_OTHER = "#C9C7C1";
 function bookSegments(bookId, cad, d){
   const ps = periodStart(cad, d);
   const s = iso(ps), e = iso(periodEnd(cad, ps));
-  const rs = rhythmsFor(bookId, cad);
+  const rs = rhythmsInPlay(bookId, cad, d).filter(countsToward);
   const idx = new Map(rs.map((r,i)=>[r.id,i]));
   const sums = rs.map(()=>0);
   let loose = 0;
@@ -696,7 +783,7 @@ function bookSegments(bookId, cad, d){
    whole card is the way in. */
 function bookCard(b, t){
   const cad = bookCadence(b.id);
-  const num = periodNumber(b.id, cad), spent = periodSpend(b.id, cad, t);
+  const num = periodNumber(b.id, cad, t), spent = periodSpend(b.id, cad, t);
   const left = num - spent, over = left < 0;
   const set = num > 0;
 
@@ -756,7 +843,9 @@ function weekBookView(id){
   const num = periodNumber(book.id, cad), spent = periodSpend(book.id, cad, t);
   const left = num - spent, over = left < 0;
   const pct = num>0 ? Math.min(100, Math.round(spent/num*100)) : 0;
-  const lines_r = rhythmsFor(book.id, cad);
+  const inplay = rhythmsInPlay(book.id, cad, t);
+  const lines_r = inplay.filter(countsToward);
+  const reserved = inplay.filter(isReserved);
 
   const arrow = (b,g,l) => '<button class="sw-arrow" data-go="week:'+b.id+'" aria-label="'+l+'">'+g+'</button>';
   const switcher = '<div class="switch">'+
@@ -798,7 +887,21 @@ function weekBookView(id){
 
   const lines = lines_r.length ? '<div class="sec">'+
     '<p class="eyebrow" style="margin-bottom:6px">This '+unit+'\u2019s rhythms</p>'+
-    lines_r.map(r=>rhythmRow(r, ps)).join("")+'</div>' : "";
+    lines_r.map(r=>rhythmRow(r, t)).join("")+'</div>' : "";
+
+  // Settled out of its own reserve \u2014 named here so the week can see what is
+  // landing, but kept off the number, which the monthly set-asides already met.
+  const held = reserved.length ? '<div class="sec">'+
+    '<p class="eyebrow" style="margin-bottom:6px">Due this '+unit+' \u2014 from its reserve</p>'+
+    '<div class="flat">'+reserved.map(r=>{
+      const rs = reserveState(r, t);
+      return '<div class="led"><span class="d">'+pretty(iso(rs.due))+'</span>'+
+        '<span class="grow trunc">'+esc(r.name)+'<span class="tag">'+money(rs.contrib)+'/mo set aside</span></span>'+
+        '<span class="tnum">'+money(r.amount)+'</span>'+
+        (rs.short>0 ? '<span class="pill p-down">'+money(rs.short)+' short</span>' : '<span class="pill p-up">covered</span>')+
+      '</div>';
+    }).join("")+'</div>'+
+    '<p class="tiny faint" style="margin-top:7px">It has been carried a month at a time, so it does not come out of this '+unit+'\u2019s number.</p></div>' : "";
 
   const logged = db.transactions
     .filter(x=>x.bookId===book.id && x.kind==="expense" && x.wallet==="operating" && !x.projectId && x.date>=iso(ps))
@@ -817,9 +920,30 @@ function weekBookView(id){
   return '<div class="wk">'+
     switcher +
     '<div class="wk-top"><p class="eyebrow">'+periodRange(cad, ps)+'</p>'+head+actions+'</div>'+
-    quick + lines + list +
+    quick + lines + held + list +
     '<div class="sec" style="text-align:center"><button class="btn btn-ghost btn-sm" data-go="book:'+book.id+'">'+
       'Wallets, projects &amp; full ledger \u2192</button></div>'+
+  '</div>';
+}
+
+/* The expected date, asked once and reused by both forms. A weekly rhythm
+   ignores it; everything slower needs it, because the date is what decides
+   which week the thing appears in at all. */
+function dueFields(r){
+  const mo = r.dueMonth || 1, day = r.dueDay || 1;
+  return '<div class="grid g2" style="margin-top:14px">'+
+    '<div><label class="label">Expected month</label>'+
+      '<input class="field tnum" name="dueMonth" inputmode="numeric" value="'+mo+'">'+
+      '<span class="tiny faint">Annual: 1–12. Quarterly: which month of the quarter, 1–3. Ignored weekly and monthly.</span></div>'+
+    '<div><label class="label">Expected day</label>'+
+      '<input class="field tnum" name="dueDay" inputmode="numeric" value="'+day+'">'+
+      '<span class="tiny faint">Day of the month it falls due. It only shows up in that week.</span></div>'+
+    '<div style="grid-column:1/-1"><label class="flat" style="padding:12px 14px;display:block;cursor:pointer">'+
+      '<span class="row" style="gap:8px"><input type="checkbox" name="reserve" value="1"'+(r.reserve?" checked":"")+'>'+
+      '<b class="small">Carry it monthly — a reserve</b></span>'+
+      '<span class="tiny faint" style="display:block;margin-top:4px;padding-left:24px">'+
+      'For a quarterly or annual obligation you cannot skip. It sets aside its share each month and is settled from that reserve on its date, '+
+      'so the week it lands does not swallow the number. Short reserves are flagged at the board meeting.</span></label></div>'+
   '</div>';
 }
 
@@ -861,6 +985,7 @@ function rhythmsSection(bookId){
       '<div><label class="label">Rhythm</label><select class="field" name="cadence">'+
         CADENCES.map(c=>'<option value="'+c+'"'+(c==="weekly"?" selected":"")+'>'+CAD_LABEL[c]+'</option>').join("")+'</select></div>'+
     '</div>'+
+    dueFields({}) +
     '<div style="margin-top:14px"><label class="label">Which kind?</label><div class="grid g2">'+
       '<label class="flat" style="padding:12px 14px;display:block;cursor:pointer"><span class="row" style="gap:8px"><input type="radio" name="type" value="flexible" checked><b class="small">A ceiling \u2014 stay under it</b></span>'+
         '<span class="tiny faint" style="display:block;margin-top:4px;padding-left:24px">Groceries, gas, dinner out. You keep it below the line.</span></label>'+
@@ -885,34 +1010,43 @@ function rhythmCard(r, t){
   const pct = r.amount>0 ? Math.min(100, Math.round(spent/r.amount*100)) : 0;
   const streak = rhythmStreak(r);
   const rev = rhythmReview(r);
+  const res = isReserved(r) ? reserveState(r, t) : null;
 
   let state;
   if(fixed) state = paid
     ? '<span class="pill p-up">Paid this '+CAD_UNIT[r.cadence]+'</span>'
-    : '<span class="pill p-warn">Due this '+CAD_UNIT[r.cadence]+'</span>';
+    : '<span class="pill p-warn">Due '+(r.cadence==="weekly" ? "this week" : pretty(iso(dueDateOn(r,t))))+'</span>';
   else state = over
     ? '<span class="pill p-down">Over by '+money(spent-r.amount)+'</span>'
     : '<span class="pill p-mute">'+money(r.amount-spent)+' left</span>';
 
   return '<div class="card rcard">'+
     '<div class="rtop"><div class="grow"><p class="rname">'+esc(r.name)+'</p>'+
-      '<p class="rmeta">'+money(r.amount)+' per '+CAD_UNIT[r.cadence]+' · '+(fixed?"obligation":"ceiling")+'</p></div>'+
+      '<p class="rmeta">'+money(r.amount)+' per '+CAD_UNIT[r.cadence]+' · '+(fixed?"obligation":"ceiling")+
+        (r.cadence==="weekly" ? "" : ' · '+dueLabel(r,t))+'</p>'+
+      (res ? '<p class="tiny faint" style="margin-top:3px">Carried at '+money(res.contrib)+' a month · '+
+        money(Math.max(0,res.held))+' set aside so far</p>' : "")+'</div>'+
       '<div class="rfig"><p class="n tnum"'+(over?' style="color:var(--down)"':"")+'>'+money(spent)+'</p>'+
       '<p class="tiny faint">this '+CAD_UNIT[r.cadence]+'</p></div></div>'+
     (fixed ? "" : '<div class="bar"><i style="width:'+(over?100:pct)+'%;background:'+(over?"var(--down)":pct>=85?"var(--warn)":"var(--up)")+'"></i></div>')+
     '<div class="row" style="flex-wrap:wrap;gap:10px">'+ state +
       (streak>0?'<span class="pill p-up">'+streak+' in a row</span>':"")+
       (rev?'<span class="pill p-warn">Earned a review</span>':"")+
+      (res ? (res.short>0
+        ? '<span class="pill p-down">'+money(res.short)+' short by '+pretty(iso(res.due))+'</span>'
+        : '<span class="pill p-teal">Reserve covers it</span>') : "")+
       '<span style="margin-left:auto" class="row">'+ historyStrip(r,8) +'</span></div>'+
     '<div class="row" style="gap:10px">'+
       (fixed && !paid ? '<button class="btn btn-ghost btn-sm" data-a="payrhythm" data-id="'+r.id+'">Mark paid — '+money(r.amount)+'</button>' : "")+
       '<button class="linkbtn neutral" data-a="editrhythm" data-id="'+r.id+'">Adjust</button>'+
       '<button class="linkbtn" data-a="delrhythm" data-id="'+r.id+'">Retire</button></div>'+
-    (openIds.has("edit-"+r.id) ? '<form class="row" data-a="updrhythm" style="gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:11px">'+
+    (openIds.has("edit-"+r.id) ? '<form data-a="updrhythm" style="border-top:1px solid var(--line);padding-top:11px">'+
       '<input type="hidden" name="id" value="'+r.id+'">'+
-      '<input class="field tnum" name="amount" value="'+dec(r.amount)+'" style="width:110px" inputmode="decimal">'+
-      '<select class="field" name="cadence" style="width:130px">'+CADENCES.map(c=>'<option value="'+c+'"'+(r.cadence===c?" selected":"")+'>'+CAD_LABEL[c]+'</option>').join("")+'</select>'+
-      '<button class="btn btn-primary btn-sm">Save the new number</button></form>' : "")+
+      '<div class="row" style="gap:8px;flex-wrap:wrap">'+
+        '<input class="field tnum" name="amount" value="'+dec(r.amount)+'" style="width:110px" inputmode="decimal" aria-label="Amount">'+
+        '<select class="field" name="cadence" style="width:130px" aria-label="Cadence">'+CADENCES.map(c=>'<option value="'+c+'"'+(r.cadence===c?" selected":"")+'>'+CAD_LABEL[c]+'</option>').join("")+'</select>'+
+      '</div>'+ dueFields(r) +
+      '<button class="btn btn-primary btn-sm" style="margin-top:12px">Save the new number</button></form>' : "")+
   '</div>';
 }
 
@@ -1249,6 +1383,25 @@ function meetingView(){
         return '<div class="kv"><span>'+esc(b.name)+'</span><span class="tnum" style="color:'+col+'">'+(r===Infinity?"—":r.toFixed(1)+" mo")+'</span></div>';
       }).join(""):'<p class="why">No ventures on the books.</p>')+'</div></div>';
 
+  /* A reserve that will not cover its bill is the quietest way to be caught
+     out — it fails months ahead, in silence, and only announces itself on the
+     day. So the meeting asks about it before the day arrives. */
+  const reserves = rhythmsFor().filter(isReserved).map(r=>({r, s:reserveState(r,t)}));
+  const short = reserves.filter(x=>x.s.short>0);
+  const reserveSec = reserves.length ? '<div class="sec"><h2 class="sec-h">Reserves</h2>'+
+    '<p class="sec-r">What is carried a month at a time toward an obligation that lands once. A shortfall here is a decision owed now, not on the due date.</p>'+
+    '<div class="card">'+ reserves.map(x=>
+      '<div class="rowsplit"><div class="grow"><p class="small" style="font-weight:600">'+esc(x.r.name)+'</p>'+
+        '<p class="tiny faint">'+bookName(x.r.bookId)+' · '+money(x.r.amount)+' due '+pretty(iso(x.s.due))+
+          ' · carried at '+money(x.s.contrib)+' a month</p></div>'+
+      '<div style="flex:0 0 auto;text-align:right"><p class="tnum small">'+money(Math.max(0,x.s.held))+' set aside</p>'+
+        (x.s.short>0
+          ? '<span class="pill p-down">'+money(x.s.short)+' short by then</span>'
+          : '<span class="pill p-up">covered</span>')+'</div></div>').join("")+
+    '</div>'+
+    (short.length ? '<p class="tiny faint" style="margin-top:8px">Raise the monthly carry, move the date, or fund the gap from the buffer — but decide it here.</p>' : "")+
+    '</div>' : "";
+
   const reviewSec = '<div class="sec"><h2 class="sec-h">Rhythms that earned a review</h2>'+
     '<p class="sec-r">A quarter of consistent overspend is evidence, not weakness. Amend the number or change the life — but decide it here.</p>'+
     '<div class="card">'+ (flagged.length ? flagged.map(x=>{
@@ -1302,7 +1455,7 @@ function meetingView(){
   return '<div class="phead"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">'+
       '<h1>The Board Meeting</h1><span class="pill p-mute">'+q.label+' · week '+Math.max(1,weeks.length)+' of 13</span></div>'+
       '<p class="role">The only place the system itself may be questioned. Thirteen weeks of evidence, read once, then written into resolutions. Doubt has an appointment, so it doesn’t wander the halls.</p></div>'+
-    brief + reviewSec +
+    brief + reserveSec + reviewSec +
     '<div class="sec"><h2 class="sec-h">The quarter, in three lines per book</h2><p class="sec-r">Earned the right to be seen four times a year.</p>'+charts+'</div>'+
     ledgers +
     '<div class="sec"><h2 class="sec-h">Amendments awaiting ratification</h2><div class="card">'+amRows+'</div></div>'+
@@ -1416,8 +1569,9 @@ function addTxn(f){
 
 const forms = {
   login(f){
-    if(f.password===PASSWORD){ authed=true; banner=""; try{sessionStorage.setItem(SESS,"1");}catch(e){} render(); }
-    else fail("That password isn’t right.");
+    const code = String(f.passcode||"").replace(/\D/g,"");
+    if(code===PASSCODE){ authed=true; banner=""; try{sessionStorage.setItem(SESS,"1");}catch(e){} render(); }
+    else fail(code.length===6 ? "That passcode isn’t right." : "The passcode is six digits.");
   },
   quicklog(f){
     const book = db.books.find(b=>b.id===f.bookId) || db.books[0];
@@ -1453,8 +1607,10 @@ const forms = {
   addrhythm(f){
     const amount = parseMoney(f.amount);
     if(!f.name || amount<=0) return;
+    const cadence = f.cadence||"weekly";
     db.rhythms.push({id:uid(), bookId:f.bookId||db.books[0].id, name:f.name, amount,
-      cadence:f.cadence||"weekly", type:f.type||"flexible", start:iso(today()), archived:false});
+      cadence, type:f.type||"flexible", start:iso(today()), archived:false,
+      dueMonth:clampInt(f.dueMonth,1,12), dueDay:clampInt(f.dueDay,1,31), reserve:!!f.reserve});
     save(); render();
   },
   updrhythm(f){
@@ -1463,6 +1619,10 @@ const forms = {
     const amount = parseMoney(f.amount);
     if(amount>0) r.amount = amount;
     if(f.cadence) r.cadence = f.cadence;
+    // The meeting's amend form carries no date fields; only touch them when asked.
+    if("dueMonth" in f) r.dueMonth = clampInt(f.dueMonth,1,12);
+    if("dueDay" in f) r.dueDay = clampInt(f.dueDay,1,31);
+    if("dueDay" in f) r.reserve = !!f.reserve;
     openIds.delete("edit-"+r.id);
     save(); render();
   },
@@ -1626,13 +1786,16 @@ function demoDb(){
     {id:"r-gas",  bookId:"personal", name:"Gas — fill the tank",  amount:6000,  cadence:"weekly",  type:"flexible"},
     {id:"r-small",bookId:"personal", name:"Coffee & small stuff", amount:5500,  cadence:"weekly",  type:"flexible"},
     {id:"r-din",  bookId:"personal", name:"Dinner out",           amount:4500,  cadence:"weekly",  type:"flexible"},
-    {id:"r-rent", bookId:"personal", name:"Rent",                 amount:165000,cadence:"monthly", type:"fixed"},
-    {id:"r-give", bookId:"personal", name:"Giving — tithe & offering", amount:60000, cadence:"monthly", type:"fixed"},
-    {id:"r-subs", bookId:"personal", name:"Subscriptions",        amount:8900,  cadence:"monthly", type:"fixed"},
-    {id:"r-pay",  bookId:"hubway",   name:"Payroll",              amount:250000,cadence:"monthly", type:"fixed"},
-    {id:"r-tools",bookId:"hubway",   name:"Tools & software",     amount:40000, cadence:"monthly", type:"fixed"},
-    {id:"r-tax",  bookId:"hubway",   name:"Tax set-aside",        amount:180000,cadence:"quarterly",type:"fixed"}
-  ].map(r=>Object.assign(r,{start:open, archived:false}));
+    {id:"r-rent", bookId:"personal", name:"Rent",                 amount:165000,cadence:"monthly", type:"fixed", dueDay:1},
+    {id:"r-give", bookId:"personal", name:"Giving — tithe & offering", amount:60000, cadence:"monthly", type:"fixed", dueDay:1},
+    {id:"r-subs", bookId:"personal", name:"Subscriptions",        amount:8900,  cadence:"monthly", type:"fixed", dueDay:1},
+    // carried monthly, settled once — the case the week must not swallow
+    {id:"r-ins",  bookId:"personal", name:"Home insurance",       amount:96000, cadence:"annual",  type:"fixed",
+      dueMonth: t.getMonth()+1, dueDay: t.getDate(), reserve:true},
+    {id:"r-pay",  bookId:"hubway",   name:"Payroll",              amount:250000,cadence:"monthly", type:"fixed", dueDay:1},
+    {id:"r-tools",bookId:"hubway",   name:"Tools & software",     amount:40000, cadence:"monthly", type:"fixed", dueDay:1},
+    {id:"r-tax",  bookId:"hubway",   name:"Tax set-aside",        amount:180000,cadence:"quarterly",type:"fixed", dueMonth:1, dueDay:15, reserve:true}
+  ].map(r=>Object.assign({dueMonth:1, dueDay:1, reserve:false}, r, {start:open, archived:false}));
 
   // opening balances
   push({bookId:"personal",date:open,kind:"income",wallet:"operating",amount:90000,source:"Opening balance"});
