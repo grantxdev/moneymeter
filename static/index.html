@@ -151,6 +151,16 @@ summary.act{color:var(--act)}
 .login .tag{text-align:center;color:var(--sub);font-size:14px;margin-top:4px}
 .login form{padding:24px;margin-top:28px}
 .login .btn{width:100%;margin-top:16px}
+/* one box per digit — the shape of the thing says what to type, so the
+   field needs no label above it */
+.code{display:flex;gap:8px;justify-content:center}
+.code input{width:100%;min-width:0;aspect-ratio:3/4;max-height:58px;text-align:center;
+  font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0;
+  -webkit-appearance:none;appearance:none;transition:border-color .12s,box-shadow .12s}
+.code input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+.code input.filled{border-color:var(--ink)}
+.code.bad input{border-color:var(--down)}
 
 /* ---------- home: the card wall ---------- */
 .eyebrow{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)}
@@ -672,13 +682,13 @@ function loginView(){
   return '<div class="login"><div class="login-in">'+
     '<h1>MoneyMeter</h1>'+
     '<form class="card" data-a="login" style="margin-top:22px">'+
-      '<label class="label" for="pw">Passcode</label>'+
-      '<input class="field tnum" id="pw" name="passcode" type="password" autofocus placeholder="6 digits" '+
-        'inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" '+
-        'style="text-align:center;letter-spacing:.4em;font-size:20px">'+
-      (banner?'<p class="small" style="color:var(--down);margin-top:8px">'+esc(banner)+'</p>':"")+
+      '<div class="code'+(banner?" bad":"")+'">'+
+        [0,1,2,3,4,5].map(i=>'<input id="d'+i+'" name="d'+i+'" type="text" data-code="'+i+'" '+
+          'inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="'+(i?"off":"one-time-code")+'" '+
+          'aria-label="Digit '+(i+1)+' of 6"'+(i?"":" autofocus")+'>').join("")+
+      '</div>'+
+      (banner?'<p class="small" style="color:var(--down);margin-top:10px;text-align:center">'+esc(banner)+'</p>':"")+
       '<button class="btn btn-primary">Enter</button></form>'+
-    '<p class="tiny faint" style="text-align:center;margin-top:22px">Private instance — one seat at this table.</p>'+
   '</div></div>';
 }
 
@@ -1490,7 +1500,7 @@ function footer(){
 }
 function render(toTop){
   const app = document.getElementById("app"), y = window.scrollY;
-  if(!authed){ app.innerHTML = loginView(); const f=app.querySelector("#pw"); if(f) f.focus(); return; }
+  if(!authed){ app.innerHTML = loginView(); const f=app.querySelector("#d0"); if(f) f.focus(); return; }
   app.innerHTML = navView()+'<main class="wrap">'+(banner?'<div class="banner"><b>The rule held.</b><span>'+esc(banner)+'</span></div>':"")+view()+footer()+'</main>'+sheetView();
   wireCharts();
   window.scrollTo(0, toTop?0:y);
@@ -1569,7 +1579,7 @@ function addTxn(f){
 
 const forms = {
   login(f){
-    const code = String(f.passcode||"").replace(/\D/g,"");
+    const code = [0,1,2,3,4,5].map(i=>f["d"+i]||"").join("").replace(/\D/g,"");
     if(code===PASSCODE){ authed=true; banner=""; try{sessionStorage.setItem(SESS,"1");}catch(e){} render(); }
     else fail(code.length===6 ? "That passcode isn’t right." : "The passcode is six digits.");
   },
@@ -1758,6 +1768,44 @@ document.addEventListener("keydown", e=>{
     if(card){ e.preventDefault(); go(card.dataset.go); }
   }
 });
+/* ---- the passcode boxes ----
+   Six boxes behave as one field: a digit moves you on, backspace on an empty
+   box moves you back, a pasted code fills the row, and the last digit enters
+   it — there is nothing to press once the code is complete. */
+function codeBoxes(el){ return [...el.closest(".code").querySelectorAll("input[data-code]")]; }
+function codeSubmit(el){
+  const boxes = codeBoxes(el);
+  if(boxes.every(b=>b.value)) el.closest("form").requestSubmit();
+}
+document.addEventListener("input", e=>{
+  const el = e.target;
+  if(!el.dataset || el.dataset.code===undefined) return;
+  el.value = el.value.replace(/\D/g,"").slice(-1);
+  el.classList.toggle("filled", !!el.value);
+  const boxes = codeBoxes(el), i = boxes.indexOf(el);
+  if(el.value && i < boxes.length-1) boxes[i+1].focus();
+  codeSubmit(el);
+});
+document.addEventListener("keydown", e=>{
+  const el = e.target;
+  if(!el.dataset || el.dataset.code===undefined) return;
+  const boxes = codeBoxes(el), i = boxes.indexOf(el);
+  if(e.key==="Backspace" && !el.value && i>0){ e.preventDefault(); boxes[i-1].value=""; boxes[i-1].classList.remove("filled"); boxes[i-1].focus(); }
+  else if(e.key==="ArrowLeft" && i>0){ e.preventDefault(); boxes[i-1].focus(); }
+  else if(e.key==="ArrowRight" && i<boxes.length-1){ e.preventDefault(); boxes[i+1].focus(); }
+});
+document.addEventListener("paste", e=>{
+  const el = e.target;
+  if(!el.dataset || el.dataset.code===undefined) return;
+  const digits = (e.clipboardData||window.clipboardData).getData("text").replace(/\D/g,"");
+  if(!digits) return;
+  e.preventDefault();
+  const boxes = codeBoxes(el);
+  boxes.forEach((b,j)=>{ b.value = digits[j] || ""; b.classList.toggle("filled", !!b.value); });
+  (boxes.find(b=>!b.value) || boxes[boxes.length-1]).focus();
+  codeSubmit(el);
+});
+
 document.addEventListener("toggle", e=>{
   const d = e.target;
   if(d.tagName!=="DETAILS" || !d.dataset.id) return;
